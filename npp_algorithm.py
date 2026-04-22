@@ -1,197 +1,76 @@
-# prio_sched_algorithm.py
-# Priority Scheduling Simulator (Non-Preemptive)
+from theme import *
 
-def npp_algorithm():
+def priority_np_gui():
+    win = AlgoWindow("Priority Scheduling (NP)", ACCENT_G)
+    body = win.body
 
-    while True:
+    out = Widgets.output_box(body, accent=ACCENT_G)
+    output = Output(out)
 
-        print("\n=== Priority Scheduling Algorithm (Non-Preemptive) ===")
+    def run():
+        n = int(entry_count.get())
+        at = [int(a.get()) for a in at_entries]
+        bt = [int(b.get()) for b in bt_entries]
+        pr = [int(p.get()) for p in pr_entries]
 
-        # ==============================
-        # INPUT SECTION
-        # ==============================
-
-        while True:
-            try:
-                process_count = int(input("\nENTER process count: "))
-                if process_count < 1:
-                    print("Process count must be at least 1.")
-                    continue
-                break
-            except ValueError:
-                print("Invalid input! Please enter a positive integer.")
-
-        arrival_time = []
-        burst_time = []
-        priority_list = []
-
-        print("\nENTER arrival times:")
-        for i in range(process_count):
-            while True:
-                try:
-                    at = int(input(f"P{i+1}: "))
-                    if at < 0:
-                        print("Arrival time cannot be negative.")
-                        continue
-                    arrival_time.append(at)
-                    break
-                except ValueError:
-                    print("Invalid input! Please enter an integer.")
-
-        print("\nENTER burst times:")
-        for i in range(process_count):
-            while True:
-                try:
-                    bt = int(input(f"P{i+1}: "))
-                    if bt <= 0:
-                        print("Burst time must be positive.")
-                        continue
-                    burst_time.append(bt)
-                    break
-                except ValueError:
-                    print("Invalid input! Please enter a positive integer.")
-
-        print("\nENTER priority (lower number = higher priority):")
-        for i in range(process_count):
-            while True:
-                try:
-                    pr = int(input(f"P{i+1}: "))
-                    priority_list.append(pr)
-                    break
-                except ValueError:
-                    print("Invalid input! Please enter an integer.")
-
-        # ==============================
-        # INITIALIZATION
-        # ==============================
-
-        completed = [False] * process_count
-        start_time = [0] * process_count
-        finish_time = [0] * process_count
-
-        current_time = 0
+        time = 0
         done = 0
+        completed = [False]*n
 
-        gantt_chart = []   # [label, start, end]
+        gantt = []
         gantt_time = [0]
 
-        # ==============================
-        # MAIN LOOP
-        # ==============================
+        start = [0]*n
+        finish = [0]*n
 
-        while done < process_count:
+        while done < n:
+            idx = -1
+            best = 10**9
 
-            ready = [
-                i for i in range(process_count)
-                if arrival_time[i] <= current_time and not completed[i]
-            ]
+            for i in range(n):
+                if at[i] <= time and not completed[i]:
+                    if pr[i] < best:
+                        best = pr[i]
+                        idx = i
 
-            # ==============================
-            # IDLE CASE
-            # ==============================
-            if not ready:
-                if gantt_chart and gantt_chart[-1][0] == "ID":
-                    gantt_chart[-1][2] = current_time + 1
-                else:
-                    gantt_chart.append(["ID", current_time, current_time + 1])
-
-                current_time += 1
-                gantt_time.append(current_time)
+            if idx == -1:
+                gantt.append("ID")
+                time += 1
+                gantt_time.append(time)
                 continue
 
-            # ==============================
-            # PICK HIGHEST PRIORITY
-            # ==============================
-            idx = ready[0]
-            for i in ready:
-                if priority_list[i] < priority_list[idx]:
-                    idx = i
-
-            start_exec = current_time
-
-            start_time[idx] = current_time
-            current_time += burst_time[idx]
-            finish_time[idx] = current_time
-
-            # ==============================
-            # FIXED GANTT MERGE
-            # ==============================
-            label = f"P{idx+1}"
-
-            if gantt_chart and gantt_chart[-1][0] == label:
-                gantt_chart[-1][2] = current_time
-            else:
-                gantt_chart.append([label, start_exec, current_time])
-
-            gantt_time.append(current_time)
+            start[idx] = time
+            gantt.append(f"P{idx+1}")
+            time += bt[idx]
+            finish[idx] = time
+            gantt_time.append(time)
 
             completed[idx] = True
             done += 1
 
-        # ==============================
-        # GANTT CHART OUTPUT
-        # ==============================
+        output.clear()
+        output.line("GANTT:", "header")
+        output.line("| " + " | ".join(gantt))
 
-        print("\nGANTT CHART:")
+    # inputs
+    section_header(body, "PRIORITY INPUT", ACCENT_G)
 
-        for block in gantt_chart:
-            print(f"| {block[0]} ", end="")
-        print("|")
+    bar, entry_count = Widgets.count_bar(body)
+    bar.pack(fill="x")
 
-        for block in gantt_chart:
-            print(f"{block[1]:<5}", end="")
-        print(gantt_chart[-1][2])
+    at_entries, bt_entries, pr_entries = [], [], []
 
-        # ==============================
-        # PROCESS TABLE
-        # ==============================
+    def build():
+        n = int(entry_count.get())
+        for i in range(n):
+            r,e = Widgets.labelled_entry(body, f"P{i+1} AT", ACCENT_G)
+            r.pack(fill="x"); at_entries.append(e)
 
-        print("\nPROCESS TABLE")
-        print("-" * 90)
-        print(f"{'Process ID':<12}|{'Arrival Time':<15}|{'Burst Time':<12}|{'Priority':<10}|{'Turnaround':<12}|{'Waiting Time':<12}|")
-        print("-" * 90)
+            r,e = Widgets.labelled_entry(body, f"P{i+1} BT", ACCENT_G)
+            r.pack(fill="x"); bt_entries.append(e)
 
-        total_turnaround = 0
-        total_waiting = 0
+            r,e = Widgets.labelled_entry(body, f"P{i+1} PR", ACCENT_G)
+            r.pack(fill="x"); pr_entries.append(e)
 
-        for i in range(process_count):
-            tat = finish_time[i] - arrival_time[i]
-            wt = tat - burst_time[i]
-
-            total_turnaround += tat
-            total_waiting += wt
-
-            print(f"{'P'+str(i+1):<12}|{arrival_time[i]:<15}|{burst_time[i]:<12}|{priority_list[i]:<10}|{tat:<12}|{wt:<12}|")
-
-        print("-" * 90)
-        print(f"{'Total':<12}|{'':<15}|{'':<12}|{'':<10}|{total_turnaround:<12}|{total_waiting:<12}|")
-        print("-" * 90)
-
-        # ==============================
-        # SYSTEM PERFORMANCE
-        # ==============================
-
-        cpu_busy_time = sum(burst_time)
-        total_time = gantt_time[-1]
-
-        cpu_idle_time = total_time - cpu_busy_time
-        cpu_utilization = (cpu_busy_time / total_time) * 100
-        throughput = process_count / total_time
-
-        print("\nSYSTEM PERFORMANCE")
-        print("CPU Busy Time:", cpu_busy_time)
-        print("CPU Idle Time:", cpu_idle_time)
-        print("CPU Utilization:", cpu_utilization)
-        print("Throughput:", throughput)
-        print("Average Waiting Time:", total_waiting / process_count)
-        print("Average Turnaround Time:", total_turnaround / process_count)
-
-        while True:
-            cont = input("\nDo you want to run Priority Scheduling again? (Y/N): ").upper()
-            if cont == "Y":
-                break
-            elif cont == "N":
-                print("\nReturning to Non-Preemptive Scheduling Menu...")
-                return
-            else:
-                print("Invalid input: Must be Y or N. Please try again.")
+    Widgets.button(body, "Generate", build, ACCENT_G).pack()
+    Widgets.button(body, "Run", run, ACCENT_G).pack()

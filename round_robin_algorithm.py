@@ -1,208 +1,168 @@
-# round_robin_algorithm.py
-# Round Robin CPU Scheduling (Preemptive)
+from theme import *
 
-def round_robin():
+def round_robin_gui():
+    win = AlgoWindow("Round Robin Scheduling", ACCENT_B)
+    body = win.body
 
-    while True:
+    out = Widgets.output_box(body, accent=ACCENT_B)
+    output = Output(out)
 
-        print("\n=== Round Robin Scheduling Algorithm (Preemptive) ===")
+    # ==============================
+    # RUN BUTTON LOGIC (UNCHANGED)
+    # ==============================
+    def run():
 
-        #==============================
-        # INPUT SECTION
-        #==============================
+        try:
+            n = int(entry_count.get())
+            at = [int(x.get()) for x in at_entries]
+            bt = [int(x.get()) for x in bt_entries]
+            tq = int(time_quantum.get())
+        except:
+            Widgets.error(win, "Invalid input values")
+            return
 
-        while True:
-            try:
-                process_count = int(input("\nENTER process count: "))
-                if process_count < 1:
-                    print("Process count must be at least 1.")
-                    continue
-                break
-            except ValueError:
-                print("Invalid input! Please enter a positive integer.")
+        # ==============================
+        # ORIGINAL LOGIC (UNCHANGED)
+        # ==============================
+        remaining = bt.copy()
+        start_time = [-1] * n
+        finish_time = [0] * n
 
-        print("\nENTER arrival times:")
-        arrival_time = []
-        for i in range(process_count):
-            while True:
-                try:
-                    at = int(input(f"P{i+1}: "))
-                    if at < 0:
-                        print("Arrival time cannot be negative.")
-                        continue
-                    arrival_time.append(at)
-                    break
-                except ValueError:
-                    print("Invalid input! Please enter an integer.")
-
-        print("\nENTER burst times:")
-        burst_time = []
-        for i in range(process_count):
-            while True:
-                try:
-                    bt = int(input(f"P{i+1}: "))
-                    if bt <= 0:
-                        print("Burst time must be positive.")
-                        continue
-                    burst_time.append(bt)
-                    break
-                except ValueError:
-                    print("Invalid input! Please enter a positive integer.")
-
-        while True:
-            try:
-                time_quantum = int(input("\nENTER time quantum: "))
-                if time_quantum <= 0:
-                    print("Time quantum must be positive.")
-                    continue
-                break
-            except ValueError:
-                print("Invalid input! Please enter a positive integer.")
-
-        #==============================
-        # INITIALIZATION
-        #==============================
-
-        remaining_burst = burst_time.copy()
-        start_time = [-1] * process_count
-        finish_time = [0] * process_count
-
-        current_time = 0
+        time = 0
         queue = []
         completed = 0
-        cpu_idle_time = 0
+        idle = 0
+        entered = [False] * n
 
-        entered = [False] * process_count
+        gantt = []
 
-        # Gantt as INTERVALS (IMPORTANT FIX)
-        gantt_chart = []   # (label, start, end)
+        while completed < n:
 
-        #==============================
-        # MAIN LOOP
-        #==============================
-        while completed < process_count:
-
-            # Add newly arrived processes
-            for i in range(process_count):
-                if arrival_time[i] <= current_time and not entered[i]:
+            for i in range(n):
+                if at[i] <= time and not entered[i]:
                     queue.append(i)
                     entered[i] = True
 
-            # IDLE CASE (MERGED)
             if not queue:
-                start = current_time
-                current_time += 1
-                cpu_idle_time += 1
-                end = current_time
+                start = time
+                time += 1
+                idle += 1
+                end = time
 
-                if gantt_chart and gantt_chart[-1][0] == "ID" and gantt_chart[-1][2] == start:
-                    gantt_chart[-1] = ("ID", gantt_chart[-1][1], end)
+                if gantt and gantt[-1][0] == "ID" and gantt[-1][2] == start:
+                    gantt[-1] = ("ID", gantt[-1][1], end)
                 else:
-                    gantt_chart.append(("ID", start, end))
-
+                    gantt.append(("ID", start, end))
                 continue
 
-            # PROCESS EXECUTION
             current = queue.pop(0)
 
             if start_time[current] == -1:
-                start_time[current] = current_time
+                start_time[current] = time
 
-            execute_time = min(time_quantum, remaining_burst[current])
+            exec_time = min(tq, remaining[current])
 
-            start = current_time
-            current_time += execute_time
-            remaining_burst[current] -= execute_time
-            end = current_time
+            start = time
+            time += exec_time
+            remaining[current] -= exec_time
+            end = time
 
             label = f"P{current+1}"
 
-            # MERGE SAME PROCESS BLOCKS
-            if gantt_chart and gantt_chart[-1][0] == label and gantt_chart[-1][2] == start:
-                gantt_chart[-1] = (label, gantt_chart[-1][1], end)
+            if gantt and gantt[-1][0] == label and gantt[-1][2] == start:
+                gantt[-1] = (label, gantt[-1][1], end)
             else:
-                gantt_chart.append((label, start, end))
+                gantt.append((label, start, end))
 
-            # Add arrivals that happened during execution
-            for i in range(process_count):
-                if arrival_time[i] <= current_time and not entered[i]:
+            for i in range(n):
+                if at[i] <= time and not entered[i]:
                     queue.append(i)
                     entered[i] = True
 
-            # Requeue or finish
-            if remaining_burst[current] > 0:
+            if remaining[current] > 0:
                 queue.append(current)
             else:
-                finish_time[current] = current_time
+                finish_time[current] = time
                 completed += 1
 
-        #==============================
-        # COMPUTE TIMES
-        #==============================
-        turnaround_time = []
-        waiting_time = []
+        # ==============================
+        # METRICS (UNCHANGED)
+        # ==============================
+        tat = [finish_time[i] - at[i] for i in range(n)]
+        wt = [tat[i] - bt[i] for i in range(n)]
 
-        total_turnaround = 0
-        total_waiting = 0
+        total_tat = sum(tat)
+        total_wt = sum(wt)
 
-        for i in range(process_count):
-            tat = finish_time[i] - arrival_time[i]
-            wt = tat - burst_time[i]
+        cpu_busy = sum(bt)
+        total_time = gantt[-1][2]
 
-            turnaround_time.append(tat)
-            waiting_time.append(wt)
+        # ==============================
+        # OUTPUT
+        # ==============================
+        output.clear()
+        output.line("GANTT CHART:", "header")
 
-            total_turnaround += tat
-            total_waiting += wt
+        output.line("| " + " | ".join([g[0] for g in gantt]) + " |")
+        output.line(" ".join(str(g[1]) for g in gantt) + f" {gantt[-1][2]}")
 
-        #==============================
-        # GANTT OUTPUT 
-        #==============================
-        print("\nGANTT CHART:")
+        output.blank()
+        output.line("PROCESS TABLE:", "header")
 
-        for block in gantt_chart:
-            print(f"| {block[0]} ", end="")
-        print("|")
+        for i in range(n):
+            output.line(
+                f"P{i+1} AT:{at[i]} BT:{bt[i]} TAT:{tat[i]} WT:{wt[i]}"
+            )
 
-        for block in gantt_chart:
-            print(f"{block[1]:<5}", end="")
-        print(f"{gantt_chart[-1][2]:<5}")
+        output.blank()
+        output.line("SYSTEM PERFORMANCE:", "header")
+        output.line(f"CPU Busy: {cpu_busy}")
+        output.line(f"CPU Idle: {idle}")
+        output.line(f"Utilization: {(cpu_busy/total_time)*100:.2f}%")
+        output.line(f"Throughput: {n/total_time:.2f}")
+        output.line(f"Avg WT: {total_wt/n:.2f}")
+        output.line(f"Avg TAT: {total_tat/n:.2f}")
 
-        #==============================
-        # PROCESS TABLE
-        #==============================
-        print("\nPROCESS TABLE")
-        print("-" * 75)
-        print(f"{'Process ID':<12}|{'Arrival Time':<15}|{'Burst Time':<12}|{'Turnaround':<12}|{'Waiting Time':<12}|")
-        print("-" * 75)
+    # ==============================
+    # UI SECTION
+    # ==============================
+    section_header(body, "ROUND ROBIN INPUT", ACCENT_B)
 
-        for i in range(process_count):
-            print(f"{'P'+str(i+1):<12}|{arrival_time[i]:<15}|{burst_time[i]:<12}|{turnaround_time[i]:<12}|{waiting_time[i]:<12}|")
+    bar, entry_count = Widgets.count_bar(body)
+    bar.pack(fill="x")
 
-        print("-" * 75)
-        print(f"{'Total':<12}|{'':<15}|{'':<12}|{total_turnaround:<12}|{total_waiting:<12}|")
-        print("-" * 75)
+    at_entries, bt_entries = [], []
 
-        #==============================
-        # SYSTEM PERFORMANCE
-        #==============================
-        cpu_busy_time = sum(burst_time)
-        total_time = gantt_chart[-1][2]
+    def build_inputs():
 
-        print("\nSYSTEM PERFORMANCE")
-        print("CPU Busy Time:", cpu_busy_time)
-        print("CPU Idle Time:", cpu_idle_time)
-        print("CPU Utilization:", (cpu_busy_time / total_time) * 100)
-        print("Throughput:", process_count / total_time)
-        print("Average Waiting Time:", total_waiting / process_count)
-        print("Average Turnaround Time:", total_turnaround / process_count)
+        for w in input_frame.winfo_children():
+            w.destroy()
 
-        while True:
-            cont = input("\nDo you want to run Round Robin again? (Y/N): ").upper()
-            if cont == "Y":
-                break
-            elif cont == "N":
-                print("\nReturning to Preemptive Scheduling Menu...")
-                return
-            else:
-                print("Invalid input: Please enter Y or N.")
+        n = int(entry_count.get())
+
+        for i in range(n):
+            r, e = Widgets.labelled_entry(input_frame, f"P{i+1} Arrival", ACCENT_B)
+            r.pack(fill="x", pady=2)
+            at_entries.append(e)
+
+        for i in range(n):
+            r, e = Widgets.labelled_entry(input_frame, f"P{i+1} Burst", ACCENT_B)
+            r.pack(fill="x", pady=2)
+            bt_entries.append(e)
+
+    tq_frame = tk.Frame(body, bg=BG)
+    tq_frame.pack(fill="x", padx=16, pady=10)
+
+    tk.Label(tq_frame, text="Time Quantum", bg=BG, fg=SUBTEXT,
+             font=F_LABEL).pack(side="left")
+
+    time_quantum = tk.Entry(tq_frame, bg=BORDER, fg=TEXT,
+                            insertbackground=ACCENT_B,
+                            relief="flat", font=F_INPUT, width=6)
+    time_quantum.pack(side="left", padx=10)
+
+    Widgets.button(body, "Generate Inputs", build_inputs, ACCENT_B).pack(pady=5)
+    Widgets.button(body, "RUN ROUND ROBIN", run, ACCENT_B).pack(pady=10)
+
+    input_frame = tk.Frame(body, bg=BG)
+    input_frame.pack(fill="x", padx=16)

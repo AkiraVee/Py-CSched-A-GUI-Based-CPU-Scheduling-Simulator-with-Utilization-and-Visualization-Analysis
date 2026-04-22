@@ -1,46 +1,79 @@
-# prio_preemptive.py
-# Priority Scheduling Simulator (Preemptive)
+# prio_preemptive_gui.py
+from theme import *
 
-def pp_algorithm():
-    
-    while True:
+def priority_preemptive_gui():
 
-        print("\n=== Priority Scheduling Algorithm (Preemptive) ===")
-        
-        # ==============================
-        # INPUT
-        # ==============================
+    win = AlgoWindow("Priority Scheduling (Preemptive)", ACCENT_B)
+    body = win.body
 
-        while True:
-            try:
-                n = int(input("\nENTER process count: "))
-                if n < 1:
-                    print("Process count must be at least 1.")
-                    continue
-                break
-            except ValueError:
-                print("Invalid input!")
+    # ==============================
+    # INPUT SECTION
+    # ==============================
+    section_header(body, "INPUT PROCESS DATA")
 
-        arrival = []
-        burst = []
-        priority = []
+    frame_count, entry_count = Widgets.count_bar(body, "Process Count", ACCENT_B)
+    frame_count.pack(fill="x", padx=16)
 
-        print("\nENTER arrival times:")
+    entries = []
+
+    def build_inputs():
+        nonlocal entries
+
+        for w in entries:
+            for item in w:
+                item.destroy()
+        entries.clear()
+
+        try:
+            n = int(entry_count.get())
+            if n < 1:
+                raise ValueError
+        except:
+            Widgets.error(win, "Invalid process count")
+            return
+
         for i in range(n):
-            arrival.append(int(input(f"P{i+1}: ")))
 
-        print("\nENTER burst times:")
-        for i in range(n):
-            burst.append(int(input(f"P{i+1}: ")))
+            row1, at = Widgets.labelled_entry(body, f"P{i+1} Arrival Time", ACCENT_B)
+            row2, bt = Widgets.labelled_entry(body, f"P{i+1} Burst Time", ACCENT_B)
+            row3, pr = Widgets.labelled_entry(body, f"P{i+1} Priority (lower = higher)", ACCENT_B)
 
-        print("\nENTER priority (lower = higher priority):")
-        for i in range(n):
-            priority.append(int(input(f"P{i+1}: ")))
+            row1.pack(fill="x", padx=16, pady=2)
+            row2.pack(fill="x", padx=16, pady=2)
+            row3.pack(fill="x", padx=16, pady=2)
+
+            entries.append((at, bt, pr, row1, row2, row3))
+
+    Widgets.button(body, "GENERATE INPUT FIELDS", build_inputs, ACCENT_B).pack(pady=10)
+
+    # ==============================
+    # OUTPUT
+    # ==============================
+    section_header(body, "RESULTS")
+
+    output = Widgets.output_box(body, height=22, accent=ACCENT_B)
+
+    def run():
+
+        try:
+            arrival = []
+            burst = []
+            priority = []
+
+            for at, bt, pr, *_ in entries:
+                arrival.append(int(at.get()))
+                burst.append(int(bt.get()))
+                priority.append(int(pr.get()))
+
+            n = len(arrival)
+
+        except:
+            Widgets.error(win, "Invalid input values")
+            return
 
         # ==============================
-        # INITIALIZATION
+        # ALGORITHM CORE (GUI VERSION)
         # ==============================
-
         remaining = burst[:]
         completed = [False] * n
 
@@ -50,18 +83,11 @@ def pp_algorithm():
         time = 0
         done = 0
 
-        gantt = []      # [label, start, end]
+        gantt = []       # [label, start, end]
         gantt_time = [0]
-
-        last = None
-
-        # ==============================
-        # MAIN LOOP (PREEMPTIVE)
-        # ==============================
 
         while done < n:
 
-            # pick highest priority available
             idx = -1
             best = float("inf")
 
@@ -71,9 +97,7 @@ def pp_algorithm():
                         best = priority[i]
                         idx = i
 
-            # ==============================
-            # IDLE CASE
-            # ==============================
+            # IDLE
             if idx == -1:
                 if gantt and gantt[-1][0] == "ID":
                     gantt[-1][2] += 1
@@ -82,99 +106,101 @@ def pp_algorithm():
 
                 time += 1
                 gantt_time.append(time)
-                last = "ID"
                 continue
 
             label = f"P{idx+1}"
 
-            # start time
             if start[idx] == -1:
                 start[idx] = time
 
-            # ==============================
-            # GANTT MERGE LOGIC
-            # ==============================
+            # Gantt merge
             if gantt and gantt[-1][0] == label:
                 gantt[-1][2] += 1
             else:
                 gantt.append([label, time, time + 1])
 
-            # execute 1 unit
             remaining[idx] -= 1
             time += 1
             gantt_time.append(time)
 
-            # finish check
             if remaining[idx] == 0:
                 finish[idx] = time
                 completed[idx] = True
                 done += 1
 
         # ==============================
-        # GANTT OUTPUT 
+        # COMPUTE METRICS
         # ==============================
-
-        print("\nGANTT CHART:")
-
-        for g in gantt:
-            print(f"| {g[0]} ", end="")
-        print("|")
-
-        for g in gantt:
-            print(f"{g[1]:<5}", end="")
-        print(gantt[-1][2])
-
-
-        # ==============================
-        # PROCESS TABLE
-        # ==============================
-
-        print("\nPROCESS TABLE")
-        print("-" * 90)
-        print(f"{'Process ID':<12}|{'Arrival':<10}|{'Burst':<10}|{'Priority':<10}|{'Turnaround':<12}|{'Waiting':<10}|")
-        print("-" * 90)
+        tat = []
+        wt = []
 
         total_tat = 0
         total_wt = 0
 
         for i in range(n):
-            tat = finish[i] - arrival[i]
-            wt = tat - burst[i]
+            t = finish[i] - arrival[i]
+            w = t - burst[i]
 
-            total_tat += tat
-            total_wt += wt
+            tat.append(t)
+            wt.append(w)
 
-            print(f"P{i+1:<11}|{arrival[i]:<10}|{burst[i]:<10}|{priority[i]:<10}|{tat:<12}|{wt:<10}|")
-
-        print("-" * 90)
-        print(f"{'Total':<12}|{'':<10}|{'':<10}|{'':<10}|{total_tat:<12}|{total_wt:<10}|")
-        print("-" * 90)
-
-
-        # ==============================
-        # PERFORMANCE
-        # ==============================
+            total_tat += t
+            total_wt += w
 
         cpu_busy = sum(burst)
         total_time = gantt_time[-1]
 
-        cpu_idle = total_time - cpu_busy
         util = (cpu_busy / total_time) * 100
         throughput = n / total_time
 
-        print("\nSYSTEM PERFORMANCE")
-        print("CPU Busy Time:", cpu_busy)
-        print("CPU Idle Time:", cpu_idle)
-        print("CPU Utilization:", util)
-        print("Throughput:", throughput)
-        print("Average Waiting Time:", total_wt / n)
-        print("Average Turnaround Time:", total_tat / n)
-        while True:
-            cont = input("\nDo you want to run Priority Scheduling again? (Y/N): ").upper()
-            if cont == "Y":
-                break
-            elif cont == "N":
-                print("\nReturning to Preemptive Scheduling Menu...")
-                return
-            else:
-                print("Invalid input: Please enter Y or N.")
+        # ==============================
+        # OUTPUT RENDERING
+        # ==============================
+        out = Output(output)
+        out.clear()
+
+        # Gantt
+        out.line("GANTT CHART:", "header")
+        for g in gantt:
+            out.line(f"| {g[0]} ", None, "")
+        out.line("|")
+
+        for g in gantt:
+            out.line(f"{g[1]:<5}", "dim", "")
+        out.line(f"{gantt[-1][2]:<5}")
+
+        out.blank()
+
+        # Table
+        out.line("PROCESS TABLE:", "header")
+
+        widths = [12, 10, 10, 10, 12, 10]
+        out.table_row("PID", "AT", "BT", "PR", "TAT", "WT", widths=widths, tag="bold")
+
+        for i in range(n):
+            out.table_row(
+                f"P{i+1}",
+                arrival[i],
+                burst[i],
+                priority[i],
+                tat[i],
+                wt[i],
+                widths=widths
+            )
+
+        out.blank()
+
+        # Performance
+        out.line("SYSTEM PERFORMANCE", "header")
+        out.kv("CPU Busy Time", cpu_busy)
+        out.kv("CPU Idle Time", total_time - cpu_busy)
+        out.kv("CPU Utilization", f"{util:.2f}%")
+        out.kv("Throughput", throughput)
+        out.kv("Avg Waiting Time", total_wt / n)
+        out.kv("Avg Turnaround Time", total_tat / n)
+
+        win.set_status("Completed", ACCENT_B)
+
+    Widgets.button(body, "RUN PRIORITY SCHEDULING", run, ACCENT_B, width=30).pack(pady=20)
+
+    win.mainloop()

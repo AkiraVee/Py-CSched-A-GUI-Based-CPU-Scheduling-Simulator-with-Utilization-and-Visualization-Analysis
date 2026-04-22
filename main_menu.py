@@ -4,8 +4,8 @@ from tkinter import ttk
 import fcfs_algorithm
 import srtf_algorithm
 import round_robin_algorithm
-import np_priosched_algorithm
-import pre_priosched_algorithm
+import npp_algorithm
+import pp_algorithm
 import sjf_algorithm
 
 
@@ -29,13 +29,13 @@ MONO      = "Consolas"
 # ═══════════════════════════════════════════════════════════
 def run_fcfs():            fcfs_algorithm.fcfs_gui()
 def run_sjf_np():          sjf_algorithm.sjf_gui()
-def run_priority_np():     np_priosched_algorithm.priority_gui()
+def run_priority_np():     npp_algorithm.priority_gui()
 
 # ═══════════════════════════════════════════════════════════
 #  PREEMPTIVE CALLBACKS  (unchanged)
 # ═══════════════════════════════════════════════════════════
 def run_sjf_preemptive():      srtf_algorithm.srtf_gui()
-def run_priority_preemptive(): pre_priosched_algorithm.priority_preemptive_gui()
+def run_priority_preemptive(): pp_algorithm.priority_preemptive_gui()
 def run_rr():                  round_robin_algorithm.round_robin_gui()
 
 

@@ -1,192 +1,149 @@
-# srtf_algorithm.py
-# Shortest Remaining Time First (Preemptive)
+from theme import *
 
-def srtf_algorithm():
+def srtf_gui():
+    win = AlgoWindow("SRTF - Shortest Remaining Time First", ACCENT_B)
+    body = win.body
 
-    while True:
+    out = Widgets.output_box(body, accent=ACCENT_B)
+    output = Output(out)
 
-        print("\n=== Shortest Remaining Time First (SRTF) Scheduling Algorithm (Preemptive) ===")
-        
-        #==============================
-        # INPUT
-        #==============================
-        while True:
-            try:
-                process_count = int(input("\nENTER process count: "))
-                if process_count < 1:
-                    print("Process count must be at least 1.")
-                    continue
-                break
-            except ValueError:
-                print("Invalid input! Please enter a positive integer.")
+    # ==============================
+    # RUN LOGIC (UNCHANGED)
+    # ==============================
+    def run():
 
-        print("\nENTER arrival times:")
-        arrival_time = []
-        for i in range(process_count):
-            while True:
-                try:
-                    at = int(input(f"P{i+1}: "))
-                    if at < 0:
-                        print("Arrival time cannot be negative.")
-                        continue
-                    arrival_time.append(at)
-                    break
-                except ValueError:
-                    print("Invalid input! Please enter an integer.")
+        try:
+            n = int(entry_count.get())
+            at = [int(x.get()) for x in at_entries]
+            bt = [int(x.get()) for x in bt_entries]
+        except:
+            Widgets.error(win, "Invalid input")
+            return
 
-        print("\nENTER burst times:")
-        burst_time = []
-        for i in range(process_count):
-            while True:
-                try:
-                    bt = int(input(f"P{i+1}: "))
-                    if bt <= 0:
-                        print("Burst time must be positive.")
-                        continue
-                    burst_time.append(bt)
-                    break
-                except ValueError:
-                    print("Invalid input! Please enter a positive integer.")
+        remaining = bt.copy()
+        finish = [0] * n
 
-        #==============================
-        # INITIALIZATION
-        #==============================
-        remaining = burst_time.copy()
-        finish_time = [0] * process_count
-
-        current_time = 0
+        time = 0
         done = 0
-        cpu_idle_time = 0
+        idle = 0
 
-        # MERGED GANTT STORAGE
-        gantt = []  # (label, start, end)
+        gantt = []
+        last = None
+        start_seg = 0
 
-        last_label = None
-        segment_start = 0
-
-        #==============================
-        # MAIN LOOP
-        #==============================
-        while done < process_count:
+        while done < n:
 
             idx = -1
-            min_remaining = float('inf')
+            min_rem = float("inf")
 
-            for i in range(process_count):
-                if arrival_time[i] <= current_time and remaining[i] > 0:
-                    if remaining[i] < min_remaining:
-                        min_remaining = remaining[i]
+            for i in range(n):
+                if at[i] <= time and remaining[i] > 0:
+                    if remaining[i] < min_rem:
+                        min_rem = remaining[i]
                         idx = i
 
-            #==============================
+            # ==============================
             # IDLE CASE
-            #==============================
+            # ==============================
             if idx == -1:
                 label = "ID"
 
-                if last_label != label:
-                    if last_label is not None:
-                        gantt.append((last_label, segment_start, current_time))
-                    segment_start = current_time
-                    last_label = label
+                if last != label:
+                    if last is not None:
+                        gantt.append((last, start_seg, time))
+                    start_seg = time
+                    last = label
 
-                current_time += 1
-                cpu_idle_time += 1
+                time += 1
+                idle += 1
                 continue
 
             label = f"P{idx+1}"
 
-            #==============================
-            # PROCESS SWITCH
-            #==============================
-            if last_label != label:
-                if last_label is not None:
-                    gantt.append((last_label, segment_start, current_time))
-                segment_start = current_time
-                last_label = label
+            # ==============================
+            # CONTEXT SWITCH
+            # ==============================
+            if last != label:
+                if last is not None:
+                    gantt.append((last, start_seg, time))
+                start_seg = time
+                last = label
 
-            # execute 1 unit time
             remaining[idx] -= 1
-            current_time += 1
+            time += 1
 
             if remaining[idx] == 0:
-                finish_time[idx] = current_time
+                finish[idx] = time
                 done += 1
 
-        # flush last segment
-        if last_label is not None:
-            gantt.append((last_label, segment_start, current_time))
+        if last is not None:
+            gantt.append((last, start_seg, time))
 
         # ==============================
-        # COMPUTATION
+        # COMPUTE
         # ==============================
-        turnaround_time = []
-        waiting_time = []
+        tat = [finish[i] - at[i] for i in range(n)]
+        wt = [tat[i] - bt[i] for i in range(n)]
 
-        total_turnaround = 0
-        total_waiting = 0
+        total_tat = sum(tat)
+        total_wt = sum(wt)
 
-        for i in range(process_count):
-            tat = finish_time[i] - arrival_time[i]
-            wt = tat - burst_time[i]
-
-            turnaround_time.append(tat)
-            waiting_time.append(wt)
-
-            total_turnaround += tat
-            total_waiting += wt
-
-        cpu_busy_time = sum(burst_time)
-        total_time = current_time
-
-        cpu_util = (cpu_busy_time / total_time) * 100
-        throughput = process_count / total_time
-
-        #==============================
-        # GANTT OUTPUT 
-        #==============================
-        print("\nGANTT CHART:")
-
-        for g in gantt:
-            print(f"| {g[0]} ", end="")
-        print("|")
-
-        for g in gantt:
-            print(f"{g[1]:<5}", end="")
-        print(f"{gantt[-1][2]:<5}")
+        cpu_busy = sum(bt)
+        total_time = time
 
         # ==============================
-        # PROCESS TABLE
+        # OUTPUT
         # ==============================
-        print("\nPROCESS TABLE")
-        print("-" * 75)
-        print(f"{'Process ID':<12}|{'Arrival Time':<15}|{'Burst Time':<12}|{'Turnaround':<12}|{'Waiting Time':<12}|")
-        print("-" * 75)
+        output.clear()
 
-        for i in range(process_count):
-            print(f"{'P'+str(i+1):<12}|{arrival_time[i]:<15}|{burst_time[i]:<12}|{turnaround_time[i]:<12}|{waiting_time[i]:<12}|")
+        output.line("GANTT CHART:", "header")
+        output.line("| " + " | ".join([g[0] for g in gantt]) + " |")
+        output.line(" ".join(str(g[1]) for g in gantt) + f" {gantt[-1][2]}")
 
-        print("-" * 75)
-        print(f"{'Total':<12}|{'':<15}|{'':<12}|{total_turnaround:<12}|{total_waiting:<12}|")
-        print("-" * 75)
+        output.blank()
+        output.line("PROCESS TABLE:", "header")
 
-        # ==============================
-        # SYSTEM PERFORMANCE
-        # ==============================
-        print("\nSYSTEM PERFORMANCE")
-        print("CPU Busy Time:", cpu_busy_time)
-        print("CPU Idle Time:", cpu_idle_time)
-        print("CPU Utilization:", cpu_util)
-        print("Throughput:", throughput)
-        print("Average Waiting Time:", total_waiting / process_count)
-        print("Average Turnaround Time:", total_turnaround / process_count)
+        for i in range(n):
+            output.line(f"P{i+1} AT:{at[i]} BT:{bt[i]} TAT:{tat[i]} WT:{wt[i]}")
 
-        while True:
-            cont = input("\nDo you want to run SRTF again? (Y/N): ").upper()
-            if cont == "Y":
-                break
-            elif cont == "N":
-                print("\nReturning to Preemptive Scheduling Menu...")
-                return
-            else:
-                print("Invalid input: Please enter Y or N.")
+        output.blank()
+        output.line("SYSTEM PERFORMANCE:", "header")
+        output.line(f"CPU Busy: {cpu_busy}")
+        output.line(f"CPU Idle: {idle}")
+        output.line(f"Utilization: {(cpu_busy/total_time)*100:.2f}%")
+        output.line(f"Throughput: {n/total_time:.2f}")
+        output.line(f"Avg WT: {total_wt/n:.2f}")
+        output.line(f"Avg TAT: {total_tat/n:.2f}")
+
+    # ==============================
+    # UI SECTION
+    # ==============================
+    section_header(body, "SRTF INPUT", ACCENT_B)
+
+    bar, entry_count = Widgets.count_bar(body)
+    bar.pack(fill="x")
+
+    at_entries, bt_entries = [], []
+
+    def build_inputs():
+
+        for w in input_frame.winfo_children():
+            w.destroy()
+
+        n = int(entry_count.get())
+
+        for i in range(n):
+            r, e = Widgets.labelled_entry(input_frame, f"P{i+1} Arrival", ACCENT_B)
+            r.pack(fill="x", pady=2)
+            at_entries.append(e)
+
+        for i in range(n):
+            r, e = Widgets.labelled_entry(input_frame, f"P{i+1} Burst", ACCENT_B)
+            r.pack(fill="x", pady=2)
+            bt_entries.append(e)
+
+    Widgets.button(body, "Generate Inputs", build_inputs, ACCENT_B).pack(pady=5)
+    Widgets.button(body, "RUN SRTF", run, ACCENT_B).pack(pady=10)
+
+    input_frame = tk.Frame(body, bg=BG)
+    input_frame.pack(fill="x", padx=16)
