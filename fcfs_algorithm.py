@@ -1,15 +1,11 @@
-"""
-fcfs_algorithm.py  –  First Come First Served (Non-Preemptive)
-Logic unchanged. GUI added via theme.py.
-"""
 import tkinter as tk
+import random
 from theme import (
     AlgoWindow, Widgets, Output, section_header, h_rule,
-    ACCENT_G, ACCENT_R, BG, PANEL, CARD, BORDER, TEXT, SUBTEXT, MONO
+    ACCENT_G, ACCENT_R, ACCENT_Y, BG, PANEL, CARD, BORDER, TEXT, SUBTEXT, MONO
 )
 
 
-# ── pure logic ────────────────────────────────────────────
 def _run_fcfs(process_count, arrival_time, burst_time):
     processes = list(range(process_count))
     processes.sort(key=lambda x: arrival_time[x])
@@ -42,37 +38,24 @@ def _run_fcfs(process_count, arrival_time, burst_time):
 
     cpu_busy_time = sum(burst_time)
     total_time    = gantt_time[-1]
-    cpu_busy_time = sum(burst_time)
-    total_time    = gantt_time[-1]
     cpu_utilization = (cpu_busy_time / total_time) * 100
     throughput = process_count / total_time
 
-
-    # ── CPU UTILIZATION LABEL ──
     if cpu_utilization < 40:
-        cpu_label = "🔴 Poor"
-        cpu_meaning = "CPU is mostly idle (underutilized)."
+        cpu_label = "Poor"; cpu_meaning = "CPU is mostly idle (underutilized)."
     elif cpu_utilization < 70:
-        cpu_label = "🟡 Fair"
-        cpu_meaning = "Moderate CPU usage."
+        cpu_label = "Fair"; cpu_meaning = "Moderate CPU usage."
     elif cpu_utilization <= 90:
-        cpu_label = "🟢 Good"
-        cpu_meaning = "Efficient CPU usage."
+        cpu_label = "Good"; cpu_meaning = "Efficient CPU usage."
     else:
-        cpu_label = "⚠️ High"
-        cpu_meaning = "Very high CPU load."
+        cpu_label = "High"; cpu_meaning = "Very high CPU load."
 
-
-    # ── THROUGHPUT LABEL ──
     if throughput < 0.5:
-        throughput_label = "🔴 Low"
-        throughput_meaning = "Few processes completed."
+        throughput_label = "Low"; throughput_meaning = "Few processes completed."
     elif throughput <= 1:
-        throughput_label = "🟡 Moderate"
-        throughput_meaning = "Balanced completion rate."
+        throughput_label = "Moderate"; throughput_meaning = "Balanced completion rate."
     else:
-        throughput_label = "🟢 High"
-        throughput_meaning = "Fast process completion."
+        throughput_label = "High"; throughput_meaning = "Fast process completion."
 
     return dict(
         process_count=process_count, arrival_time=arrival_time,
@@ -81,18 +64,14 @@ def _run_fcfs(process_count, arrival_time, burst_time):
         total_waiting=total_waiting, gantt_chart=gantt_chart,
         gantt_time=gantt_time, cpu_busy_time=cpu_busy_time,
         cpu_idle_time=total_time - cpu_busy_time,
-        cpu_utilization=(cpu_busy_time / total_time) * 100,
-        throughput=process_count / total_time,
+        cpu_utilization=cpu_utilization, throughput=throughput,
         avg_waiting_time=total_waiting / process_count,
         avg_turnaround_time=total_turnaround / process_count,
-        cpu_label=cpu_label,
-        cpu_meaning=cpu_meaning,
-        throughput_label=throughput_label,
-        throughput_meaning=throughput_meaning,
+        cpu_label=cpu_label, cpu_meaning=cpu_meaning,
+        throughput_label=throughput_label, throughput_meaning=throughput_meaning,
     )
 
 
-# ── gui ───────────────────────────────────────────────────
 def _input_panel(win):
     section_header(win.body, "STEP 1  –  PROCESS COUNT", accent=ACCENT_G)
     count_bar, count_entry = Widgets.count_bar(win.body, "Number of processes")
@@ -138,7 +117,22 @@ def _input_panel(win):
         _build(n)
         win.set_status(f"{n} processes loaded – fill in times and press RUN")
 
-    Widgets.button(count_bar, "CONFIRM", _confirm, accent=ACCENT_G, width=10).pack(side="left", padx=10)
+    def _randomize():
+        try:
+            n = int(count_entry.get())
+            if n < 1: raise ValueError
+        except ValueError:
+            Widgets.error(win, "Confirm a process count first."); return
+        if not entry_rows:
+            _build(n)
+        arrival_pool = sorted(random.randint(0, 10) for _ in range(n))
+        for i, (at_e, bt_e) in enumerate(entry_rows):
+            at_e.delete(0, "end"); at_e.insert(0, str(arrival_pool[i]))
+            bt_e.delete(0, "end"); bt_e.insert(0, str(random.randint(1, 10)))
+        win.set_status("Random values generated – press RUN to simulate")
+
+    Widgets.button(count_bar, "CONFIRM",  _confirm,   accent=ACCENT_G, width=10).pack(side="left", padx=10)
+    Widgets.button(count_bar, "RANDOM",   _randomize, accent=ACCENT_Y, width=10).pack(side="left", padx=(0, 10))
     return entry_rows, table_host, count_entry
 
 
@@ -189,27 +183,25 @@ def _render(out, r):
 
     out.line("  PROCESS TABLE", tag="header"); out.blank()
     W = [6, 14, 12, 14, 14]
-    out.table_row("PID","Arrival","Burst","Turnaround","Waiting", widths=W, tag="bold")
+    out.table_row("PID", "Arrival", "Burst", "Turnaround", "Waiting", widths=W, tag="bold")
     out.divider("─", 62, tag="dim")
     for i in range(n):
         out.table_row(f"P{i+1}", r["arrival_time"][i], r["burst_time"][i],
                       r["turnaround_time"][i], r["waiting_time"][i],
-                      widths=W, tag="accent" if i%2==0 else None)
+                      widths=W, tag="accent" if i % 2 == 0 else None)
     out.divider("─", 62, tag="dim")
-    out.table_row("Total","","", r["total_turnaround"], r["total_waiting"], widths=W, tag="bold")
+    out.table_row("Total", "", "", r["total_turnaround"], r["total_waiting"], widths=W, tag="bold")
     out.blank(); out.divider()
 
     out.line("  SYSTEM PERFORMANCE", tag="header"); out.blank()
-    out.kv("CPU Busy Time",         r["cpu_busy_time"])
-    out.kv("CPU Idle Time",         r["cpu_idle_time"])
-    out.kv("CPU Utilization (%)",
-        f"{r['cpu_utilization']:.2f} ({r['cpu_label']})")
+    out.kv("CPU Busy Time",       r["cpu_busy_time"])
+    out.kv("CPU Idle Time",       r["cpu_idle_time"])
+    out.kv("CPU Utilization (%)", f"{r['cpu_utilization']:.2f}  [{r['cpu_label']}]")
     out.line(f"    → {r['cpu_meaning']}", tag="dim")
-    out.kv("Throughput",
-        f"{r['throughput']:.4f} ({r['throughput_label']})")
+    out.kv("Throughput",          f"{r['throughput']:.4f}  [{r['throughput_label']}]")
     out.line(f"    → {r['throughput_meaning']}", tag="dim")
-    out.kv("Avg Waiting Time",      f"{r['avg_waiting_time']:.2f}")
-    out.kv("Avg Turnaround Time",   f"{r['avg_turnaround_time']:.2f}")
+    out.kv("Avg Waiting Time",    f"{r['avg_waiting_time']:.2f}")
+    out.kv("Avg Turnaround Time", f"{r['avg_turnaround_time']:.2f}")
     out.blank()
 
 if __name__ == "__main__":
