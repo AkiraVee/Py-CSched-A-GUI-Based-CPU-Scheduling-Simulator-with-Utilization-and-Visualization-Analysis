@@ -1,0 +1,181 @@
+DETAILED CODE EXPLANATION
+(Imports + Database + Functions)
+
+IMPORTS EXPLANATION
+sqlite3
+
+Used to interact with the SQLite database
+Handles storing and retrieving user records
+Enables SQL operations such as SELECT, INSERT, and UPDATE
+
+hashlib
+
+Provides cryptographic hashing functions
+Used to convert passwords into SHA‑256 hashes
+Ensures passwords are never stored or compared as plaintext
+
+os
+
+Used to locate the script directory reliably
+Prevents accidental creation of databases in incorrect folders
+
+tkinter
+
+Provides the graphical user interface
+Handles windows, buttons, text fields, and layout
+
+tkinter.messagebox
+
+Displays pop‑up messages (success, error, warning)
+
+tkinter.ttk
+
+Provides advanced widgets such as Treeview
+Used to display database information in a table format
+
+DATABASE CONFIGURATION
+PythonBASE_DIR = os.path.dirname(os.path.abspath(**file**))
+DATABASE_FILE = os.path.join(BASE_DIR, "usersShow more lines
+This ensures:
+
+The database file is always created in the same directory as the script
+The application behaves consistently regardless of where it is launched
+
+PASSWORD SECURITY
+hash_password(password)
+
+Converts a plaintext password into a SHA‑256 hash
+Example workflow:
+
+User enters password
+Password is hashed
+Hash is stored or compared with database values
+
+This protects users even if the database file is accessed directly.
+
+DATABASE INITIALIZATION
+initialize_database()
+
+Creates the users table if it does not already exist
+Table columns:
+
+username
+password (hashed)
+security_question
+security_answer
+role
+
+add_role_column_if_missing()
+
+Ensures backward compatibility
+Adds a role column if the database was created before role support was implemented
+
+ADMIN INITIALIZATION
+create_default_admin()
+
+Automatically creates an administrator account if one does not exist
+Prevents the need to hard‑code admin credentials in the application logic
+Default admin role is stored inside the database, not inferred from the username alone
+
+AUTHENTICATION FUNCTIONS
+Login
+
+Retrieves the stored hash from the database
+Hashes the entered password
+Compares hashes securely
+Redirects users based on role (admin or user)
+
+Sign Up
+
+Prevents usage of the reserved admin username
+Hashes passwords before storing
+Saves security questions for recovery
+
+Forgot Password
+
+Verifies identity using a security question
+Allows users to set a new password securely
+
+ADMIN FEATURES (LOGIC‑SIDE)
+Admins are granted elevated privileges through role‑based access control, including:
+View Users
+
+Displays usernames and roles
+Does not expose:
+
+Password hashes
+Security answers
+
+Reset User Password
+
+Sets a temporary password (Temp123)
+Demonstrates safe administrative recovery
+
+Promote User to Admin
+
+Updates user role in the database
+Prevents privilege escalation without admin approval
+
+GUI IMPLEMENTATION (TKINTER)
+The GUI:
+
+Replaces CLI input/output, not the logic
+Calls the same database queries and hashing functions
+Displays information clearly using labels, entry fields, and tables
+
+Admin Database Viewer
+
+Uses ttk.Treeview to show:
+
+Username
+Role
+
+Read‑only access
+Prevents direct SQL interaction
+
+GENERAL README EXPLANATION (NON‑CODE, NON-FINAL VERSION)
+
+You can paste this directly into your README.md
+
+Login System with Role‑Based Administration
+This project is a secure login system built using Python, SQLite, and Tkinter.
+It supports user registration, authentication, password recovery, and administrative account management through a graphical interface.
+
+Security Features
+
+Passwords are hashed using SHA‑256 before storage
+Plaintext passwords are never saved or displayed
+Role‑based access control separates users from administrators
+
+Database Design
+
+SQLite is used for lightweight local storage
+User data includes usernames, hashed passwords, recovery questions, and account roles
+The database automatically initializes and upgrades when required
+
+User Capabilities
+
+Sign up for an account
+Log in securely
+Recover forgotten passwords using security questions
+
+Administrator Capabilities
+
+View registered user accounts (read‑only)
+Promote users to administrator roles
+Reset user passwords safely
+Access is controlled via database‑stored roles, not hard‑coded rules
+
+Graphical Interface
+
+Tkinter is used solely as a presentation layer
+Core authentication and security logic remains unchanged
+The GUI improves usability without compromising security
+
+Design Philosophy
+The system follows a clean separation of concerns:
+
+Logic layer: authentication, hashing, database rules
+UI layer: input and display using Tkinter
+
+This design ensures maintainability, scalability, and strong security practices.
