@@ -1,96 +1,71 @@
-"""
-pre_priosched_algorithm.py  –  Priority Scheduling (Preemptive)
-Logic unchanged. GUI added via theme.py.
-"""
 import tkinter as tk
+import random
 from theme import (
     AlgoWindow, Widgets, Output, section_header, h_rule,
-    ACCENT_B, ACCENT_R, BG, PANEL, CARD, BORDER, TEXT, SUBTEXT, MONO
+    ACCENT_B, ACCENT_R, ACCENT_Y, BG, PANEL, CARD, BORDER, TEXT, SUBTEXT, MONO
 )
 
 
-# ── pure logic ────────────────────────────────────────────
+def _perf_labels(cpu_util, throughput):
+    if cpu_util < 40:    cpu_label, cpu_meaning = "Poor",     "CPU is mostly idle (underutilized)."
+    elif cpu_util < 70:  cpu_label, cpu_meaning = "Fair",     "Moderate CPU usage."
+    elif cpu_util <= 90: cpu_label, cpu_meaning = "Good",     "Efficient CPU usage."
+    else:                cpu_label, cpu_meaning = "High",     "Very high CPU load."
+    if throughput < 0.5: tp_label,  tp_meaning  = "Low",      "Few processes completed."
+    elif throughput <= 1:tp_label,  tp_meaning  = "Moderate", "Balanced completion rate."
+    else:                tp_label,  tp_meaning  = "High",     "Fast process completion."
+    return cpu_label, cpu_meaning, tp_label, tp_meaning
+
+
 def _run_pp(n, arrival, burst, priority):
     remaining=burst[:]; completed=[False]*n; start=[-1]*n; finish=[0]*n
     time=0; done=0; gantt=[]; last=None
-
     while done < n:
         idx=-1; best=float("inf")
         for i in range(n):
             if arrival[i]<=time and remaining[i]>0:
                 if priority[i]<best: best=priority[i]; idx=i
         if idx==-1:
-            if gantt and gantt[-1][0]=="IDLE": gantt[-1][2]+=1
-            else: gantt.append(["IDLE",time,time+1])
-            time+=1; last="IDLE"; continue
+            if gantt and gantt[-1][0]=="ID": gantt[-1][2]+=1
+            else: gantt.append(["ID",time,time+1])
+            time+=1; last="ID"; continue
         label=f"P{idx+1}"
         if start[idx]==-1: start[idx]=time
         if gantt and gantt[-1][0]==label: gantt[-1][2]+=1
         else: gantt.append([label,time,time+1])
         remaining[idx]-=1; time+=1
         if remaining[idx]==0: finish[idx]=time; completed[idx]=True; done+=1
-
     total_tat=0; total_wt=0; turnaround_time=[]; waiting_time=[]
     for i in range(n):
         tat=finish[i]-arrival[i]; wt=tat-burst[i]
         turnaround_time.append(tat); waiting_time.append(wt)
         total_tat+=tat; total_wt+=wt
-
     cpu_busy=sum(burst); total_time=time
-    cpu_util = (cpu_busy/total_time)*100
-    throughput_val = n/total_time
-
-    # CPU LABEL
-    if cpu_util < 40:
-        cpu_label = "🔴 Poor"
-        cpu_meaning = "CPU is mostly idle (underutilized)."
-    elif cpu_util < 70:
-        cpu_label = "🟡 Fair"
-        cpu_meaning = "Moderate CPU usage."
-    elif cpu_util <= 90:
-        cpu_label = "🟢 Good"
-        cpu_meaning = "Efficient CPU usage."
-    else:
-        cpu_label = "⚠️ High"
-        cpu_meaning = "Very high CPU load."
-
-    # THROUGHPUT LABEL
-    if throughput_val < 0.5:
-        throughput_label = "🔴 Low"
-        throughput_meaning = "Few processes completed."
-    elif throughput_val <= 1:
-        throughput_label = "🟡 Moderate"
-        throughput_meaning = "Balanced completion rate."
-    else:
-        throughput_label = "🟢 High"
-        throughput_meaning = "Fast process completion."
-
+    cpu_util=(cpu_busy/total_time)*100; throughput=n/total_time
+    cpu_label,cpu_meaning,tp_label,tp_meaning=_perf_labels(cpu_util,throughput)
     return dict(
         n=n, arrival=arrival, burst=burst, priority=priority,
         turnaround_time=turnaround_time, waiting_time=waiting_time,
         total_tat=total_tat, total_wt=total_wt, gantt=gantt,
         cpu_busy=cpu_busy, cpu_idle=total_time-cpu_busy,
-        util=(cpu_busy/total_time)*100, throughput=n/total_time,
+        util=cpu_util, throughput=throughput,
         avg_wt=total_wt/n, avg_tat=total_tat/n,
-        cpu_label=cpu_label,
-        cpu_meaning=cpu_meaning,
-        throughput_label=throughput_label,
-        throughput_meaning=throughput_meaning,
+        cpu_label=cpu_label, cpu_meaning=cpu_meaning,
+        throughput_label=tp_label, throughput_meaning=tp_meaning,
     )
 
 
-# ── gui ───────────────────────────────────────────────────
 def priority_preemptive_gui():
     win = AlgoWindow("Priority Scheduling  –  Preemptive", accent=ACCENT_B, width=860, height=680)
 
-    section_header(win.body, "STEP 1  –  PROCESS COUNT", accent=ACCENT_B)
-    count_bar, count_entry = Widgets.count_bar(win.body, "Number of processes")
-    count_bar.pack(fill="x", padx=16, pady=(4,2))
-    h_rule(win.body, BORDER)
+    section_header(win.body,"STEP 1  –  PROCESS COUNT",accent=ACCENT_B)
+    count_bar,count_entry=Widgets.count_bar(win.body,"Number of processes")
+    count_bar.pack(fill="x",padx=16,pady=(4,2))
+    h_rule(win.body,BORDER)
 
-    section_header(win.body, "STEP 2  –  ARRIVAL, BURST & PRIORITY", accent=ACCENT_B)
-    tk.Label(win.body, text="  Lower priority number = higher priority",
-             bg=BG, fg=SUBTEXT, font=(MONO,8), anchor="w").pack(fill="x", padx=16)
+    section_header(win.body,"STEP 2  –  ARRIVAL, BURST & PRIORITY",accent=ACCENT_B)
+    tk.Label(win.body,text="  Lower priority number = higher priority",
+             bg=BG,fg=SUBTEXT,font=(MONO,8),anchor="w").pack(fill="x",padx=16)
 
     table_host=tk.Frame(win.body,bg=BG); table_host.pack(fill="x",padx=16,pady=(4,4))
     col_hdr=tk.Frame(table_host,bg=CARD); col_hdr.pack(fill="x",pady=(0,2))
@@ -121,7 +96,21 @@ def priority_preemptive_gui():
         except ValueError: Widgets.error(win,"Process count must be a positive integer."); return
         _build(n); win.set_status(f"{n} processes loaded")
 
+    def _randomize():
+        try:
+            n=int(count_entry.get())
+            if n<1: raise ValueError
+        except ValueError: Widgets.error(win,"Confirm a process count first."); return
+        if not entry_rows: _build(n)
+        pool=sorted(random.randint(0,10) for _ in range(n))
+        for i,(at_e,bt_e,pr_e) in enumerate(entry_rows):
+            at_e.delete(0,"end"); at_e.insert(0,str(pool[i]))
+            bt_e.delete(0,"end"); bt_e.insert(0,str(random.randint(1,10)))
+            pr_e.delete(0,"end"); pr_e.insert(0,str(random.randint(1,10)))
+        win.set_status("Random values generated – press RUN to simulate")
+
     Widgets.button(count_bar,"CONFIRM",_confirm,accent=ACCENT_B,width=10).pack(side="left",padx=10)
+    Widgets.button(count_bar,"RANDOM",_randomize,accent=ACCENT_Y,width=10).pack(side="left",padx=(0,10))
     h_rule(win.body,BORDER)
     btn_row=tk.Frame(win.body,bg=BG,pady=8); btn_row.pack(fill="x",padx=16)
     section_header(win.body,"OUTPUT",subtitle="gantt chart · process table · performance",accent=ACCENT_B)
@@ -137,8 +126,8 @@ def priority_preemptive_gui():
                 if bt<=0: raise ValueError("Burst time must be positive.")
                 arrival.append(at); burst.append(bt); prio.append(pr)
             except ValueError as e: Widgets.error(win,f"P{i+1}: {e}"); return
-        r=_run_pp(len(entry_rows),arrival,burst,prio); _render(out,r)
-        win.set_status("Simulation complete", color=ACCENT_B)
+        _render(out,_run_pp(len(entry_rows),arrival,burst,prio))
+        win.set_status("Simulation complete",color=ACCENT_B)
 
     def _clear():
         out.clear(); count_entry.delete(0,"end")
@@ -150,17 +139,17 @@ def priority_preemptive_gui():
     win.grab_set()
 
 
-def _render(out, r):
+def _render(out,r):
     out.clear(); n=r["n"]
-    out.line("  GANTT CHART", tag="header"); out.blank()
+    out.line("  GANTT CHART",tag="header"); out.blank()
     bar="  "
     for g in r["gantt"]: bar+=f"│{g[0]:^6}"
-    out.line(bar+"│", tag="accent")
+    out.line(bar+"│",tag="accent")
     tl="  "
     for g in r["gantt"]: tl+=f"{g[1]:<7}"
     tl+=str(r["gantt"][-1][2])
-    out.line(tl, tag="dim"); out.blank(); out.divider()
-    out.line("  PROCESS TABLE", tag="header"); out.blank()
+    out.line(tl,tag="dim"); out.blank(); out.divider()
+    out.line("  PROCESS TABLE",tag="header"); out.blank()
     W=[6,12,10,10,12,12]
     out.table_row("PID","Arrival","Burst","Priority","Turnaround","Waiting",widths=W,tag="bold")
     out.divider("─",64,tag="dim")
@@ -171,19 +160,16 @@ def _render(out, r):
     out.divider("─",64,tag="dim")
     out.table_row("Total","","","",r["total_tat"],r["total_wt"],widths=W,tag="bold")
     out.blank(); out.divider()
-    out.line("  SYSTEM PERFORMANCE", tag="header"); out.blank()
+    out.line("  SYSTEM PERFORMANCE",tag="header"); out.blank()
     out.kv("CPU Busy Time",       r["cpu_busy"])
     out.kv("CPU Idle Time",       r["cpu_idle"])
-    out.kv("CPU Utilization (%)",
-        f"{r['util']:.2f} ({r['cpu_label']})")
-    out.line(f"    → {r['cpu_meaning']}", tag="dim")
-    out.kv("Throughput",
-        f"{r['throughput']:.4f} ({r['throughput_label']})")
-    out.line(f"    → {r['throughput_meaning']}", tag="dim")
+    out.kv("CPU Utilization (%)", f"{r['util']:.2f}  [{r['cpu_label']}]")
+    out.line(f"    → {r['cpu_meaning']}",tag="dim")
+    out.kv("Throughput",          f"{r['throughput']:.4f}  [{r['throughput_label']}]")
+    out.line(f"    → {r['throughput_meaning']}",tag="dim")
     out.kv("Avg Waiting Time",    f"{r['avg_wt']:.2f}")
     out.kv("Avg Turnaround Time", f"{r['avg_tat']:.2f}")
     out.blank()
-
 
 if __name__ == "__main__":
     root=tk.Tk(); root.withdraw(); priority_preemptive_gui(); root.mainloop()
