@@ -1,5 +1,5 @@
 """
-cpu_scheduler_gui.py  –  CPU Scheduling Simulator main menu
+main_menu.py  –  CPU Scheduling Simulator main menu
 All visual design is handled by menu_design.py.
 """
 import tkinter as tk
