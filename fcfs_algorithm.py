@@ -42,11 +42,8 @@ def _run_fcfs(process_count, arrival_time, burst_time):
 
     cpu_busy_time = sum(burst_time)
     total_time    = gantt_time[-1]
-
-
     cpu_busy_time = sum(burst_time)
     total_time    = gantt_time[-1]
-
     cpu_utilization = (cpu_busy_time / total_time) * 100
     throughput = process_count / total_time
 
