@@ -246,18 +246,14 @@ def _render(out, r):
 
     # ── PERFORMANCE ─────────────────────────────
     out.line("  SYSTEM PERFORMANCE", tag="header"); out.blank()
-
     out.kv("CPU Busy Time", r["cpu_busy_time"])
     out.kv("CPU Idle Time", r["cpu_idle_time"])
-
     out.kv("CPU Utilization (%)",
            f"{r['cpu_utilization']:.2f} ({r['cpu_label']})")
     out.line(f"    → {r['cpu_meaning']}", tag="dim")
-
     out.kv("Throughput",
            f"{r['throughput']:.4f} ({r['throughput_label']})")
     out.line(f"    → {r['throughput_meaning']}", tag="dim")
-
     out.kv("Avg Waiting Time", f"{r['avg_waiting_time']:.2f}")
     out.kv("Avg Turnaround Time", f"{r['avg_turnaround_time']:.2f}")
     out.blank()
