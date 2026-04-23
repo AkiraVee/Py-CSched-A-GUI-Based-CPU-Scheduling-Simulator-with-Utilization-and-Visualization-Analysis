@@ -21,9 +21,9 @@ def _run_rr(process_count, arrival_time, burst_time, time_quantum):
                 queue.append(i); entered[i]=True
         if not queue:
             start=current_time; current_time+=1; cpu_idle_time+=1; end=current_time
-            if gantt_chart and gantt_chart[-1][0]=="ID" and gantt_chart[-1][2]==start:
-                gantt_chart[-1]=("ID",gantt_chart[-1][1],end)
-            else: gantt_chart.append(("ID",start,end))
+            if gantt_chart and gantt_chart[-1][0]=="IDLE" and gantt_chart[-1][2]==start:
+                gantt_chart[-1]=("IDLE",gantt_chart[-1][1],end)
+            else: gantt_chart.append(("IDLE",start,end))
             continue
         current=queue.pop(0)
         if start_time[current]==-1: start_time[current]=current_time
@@ -45,6 +45,34 @@ def _run_rr(process_count, arrival_time, burst_time, time_quantum):
         turnaround_time.append(tat); waiting_time.append(wt)
         total_turnaround+=tat; total_waiting+=wt
     cpu_busy_time=sum(burst_time); total_time=gantt_chart[-1][2]
+    cpu_util = (cpu_busy_time / total_time) * 100
+    throughput_val = process_count / total_time
+
+    # ── CPU UTILIZATION LABEL ───────────────────────────
+    if cpu_util < 40:
+        cpu_label = "🔴 Poor"
+        cpu_meaning = "CPU is mostly idle (underutilized)."
+    elif cpu_util < 70:
+        cpu_label = "🟡 Fair"
+        cpu_meaning = "Moderate CPU usage."
+    elif cpu_util <= 90:
+        cpu_label = "🟢 Good"
+        cpu_meaning = "Efficient CPU usage."
+    else:
+        cpu_label = "⚠️ High"
+        cpu_meaning = "Very high CPU load."
+
+    # ── THROUGHPUT LABEL ────────────────────────────────
+    if throughput_val < 0.5:
+        throughput_label = "🔴 Low"
+        throughput_meaning = "Few processes completed."
+    elif throughput_val <= 1:
+        throughput_label = "🟡 Moderate"
+        throughput_meaning = "Balanced completion rate."
+    else:
+        throughput_label = "🟢 High"
+        throughput_meaning = "Fast process completion."
+
     return dict(
         process_count=process_count, arrival_time=arrival_time,
         burst_time=burst_time, time_quantum=time_quantum,
@@ -52,10 +80,14 @@ def _run_rr(process_count, arrival_time, burst_time, time_quantum):
         total_turnaround=total_turnaround, total_waiting=total_waiting,
         gantt_chart=gantt_chart, cpu_busy_time=cpu_busy_time,
         cpu_idle_time=cpu_idle_time,
-        cpu_utilization=(cpu_busy_time/total_time)*100,
-        throughput=process_count/total_time,
+        cpu_util=cpu_util,
+        throughput=throughput_val,
         avg_waiting_time=total_waiting/process_count,
         avg_turnaround_time=total_turnaround/process_count,
+        cpu_label=cpu_label,
+        cpu_meaning=cpu_meaning,
+        throughput_label=throughput_label,
+        throughput_meaning=throughput_meaning,
     )
 
 
@@ -161,14 +193,18 @@ def _render(out, r):
                       widths=W,tag="accent" if i%2==0 else None)
     out.divider("─",62,tag="dim")
     out.table_row("Total","","",r["total_turnaround"],r["total_waiting"],widths=W,tag="bold")
-    out.blank(); out.divider()
     out.line("  SYSTEM PERFORMANCE", tag="header"); out.blank()
     out.kv("CPU Busy Time",       r["cpu_busy_time"])
     out.kv("CPU Idle Time",       r["cpu_idle_time"])
-    out.kv("CPU Utilization (%)", f"{r['cpu_utilization']:.2f}")
-    out.kv("Throughput",          f"{r['throughput']:.4f}")
+    out.kv("CPU Utilization (%)",
+        f"{r['cpu_util']:.2f} ({r['cpu_label']})")
+    out.line(f"    → {r['cpu_meaning']}", tag="dim")
+    out.kv("Throughput",
+        f"{r['throughput']:.4f} ({r['throughput_label']})")
+    out.line(f"    → {r['throughput_meaning']}", tag="dim")
     out.kv("Avg Waiting Time",    f"{r['avg_waiting_time']:.2f}")
     out.kv("Avg Turnaround Time", f"{r['avg_turnaround_time']:.2f}")
+    out.blank()
     out.blank()
 
 
