@@ -42,6 +42,38 @@ def _run_fcfs(process_count, arrival_time, burst_time):
 
     cpu_busy_time = sum(burst_time)
     total_time    = gantt_time[-1]
+    cpu_busy_time = sum(burst_time)
+    total_time    = gantt_time[-1]
+    cpu_utilization = (cpu_busy_time / total_time) * 100
+    throughput = process_count / total_time
+
+
+    # ── CPU UTILIZATION LABEL ──
+    if cpu_utilization < 40:
+        cpu_label = "🔴 Poor"
+        cpu_meaning = "CPU is mostly idle (underutilized)."
+    elif cpu_utilization < 70:
+        cpu_label = "🟡 Fair"
+        cpu_meaning = "Moderate CPU usage."
+    elif cpu_utilization <= 90:
+        cpu_label = "🟢 Good"
+        cpu_meaning = "Efficient CPU usage."
+    else:
+        cpu_label = "⚠️ High"
+        cpu_meaning = "Very high CPU load."
+
+
+    # ── THROUGHPUT LABEL ──
+    if throughput < 0.5:
+        throughput_label = "🔴 Low"
+        throughput_meaning = "Few processes completed."
+    elif throughput <= 1:
+        throughput_label = "🟡 Moderate"
+        throughput_meaning = "Balanced completion rate."
+    else:
+        throughput_label = "🟢 High"
+        throughput_meaning = "Fast process completion."
+
     return dict(
         process_count=process_count, arrival_time=arrival_time,
         burst_time=burst_time, turnaround_time=turnaround_time,
@@ -53,6 +85,10 @@ def _run_fcfs(process_count, arrival_time, burst_time):
         throughput=process_count / total_time,
         avg_waiting_time=total_waiting / process_count,
         avg_turnaround_time=total_turnaround / process_count,
+        cpu_label=cpu_label,
+        cpu_meaning=cpu_meaning,
+        throughput_label=throughput_label,
+        throughput_meaning=throughput_meaning,
     )
 
 
@@ -166,8 +202,12 @@ def _render(out, r):
     out.line("  SYSTEM PERFORMANCE", tag="header"); out.blank()
     out.kv("CPU Busy Time",         r["cpu_busy_time"])
     out.kv("CPU Idle Time",         r["cpu_idle_time"])
-    out.kv("CPU Utilization (%)",   f"{r['cpu_utilization']:.2f}")
-    out.kv("Throughput",            f"{r['throughput']:.4f}")
+    out.kv("CPU Utilization (%)",
+        f"{r['cpu_utilization']:.2f} ({r['cpu_label']})")
+    out.line(f"    → {r['cpu_meaning']}", tag="dim")
+    out.kv("Throughput",
+        f"{r['throughput']:.4f} ({r['throughput_label']})")
+    out.line(f"    → {r['throughput_meaning']}", tag="dim")
     out.kv("Avg Waiting Time",      f"{r['avg_waiting_time']:.2f}")
     out.kv("Avg Turnaround Time",   f"{r['avg_turnaround_time']:.2f}")
     out.blank()
