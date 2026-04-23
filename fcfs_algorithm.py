@@ -1,6 +1,6 @@
 """
 fcfs_algorithm.py  –  First Come First Served (Non-Preemptive)
-This module implements the FCFS scheduling algorithm and its GUI interface.
+Logic unchanged. GUI added via theme.py.
 """
 import tkinter as tk
 from theme import (
@@ -32,26 +32,26 @@ def _run_fcfs(process_count, arrival_time, burst_time):
         finish_time[i] = current_time
         gantt_time.append(current_time)
 
-    turnaround_time = []
-    waiting_time = []
-    total_turnaround = 0
-    total_waiting = 0
-
+    turnaround_time = []; waiting_time = []
+    total_turnaround = 0; total_waiting = 0
     for i in range(process_count):
         tat = finish_time[i] - arrival_time[i]
         wt  = tat - burst_time[i]
-        turnaround_time.append(tat)
-        waiting_time.append(wt)
-        total_turnaround += tat
-        total_waiting += wt
+        turnaround_time.append(tat); waiting_time.append(wt)
+        total_turnaround += tat;     total_waiting += wt
+
+    cpu_busy_time = sum(burst_time)
+    total_time    = gantt_time[-1]
+
 
     cpu_busy_time = sum(burst_time)
     total_time    = gantt_time[-1]
 
     cpu_utilization = (cpu_busy_time / total_time) * 100
-    throughput_val  = process_count / total_time
+    throughput = process_count / total_time
 
-    # ── CPU LABEL ────────────────────────────────────────
+
+    # ── CPU UTILIZATION LABEL ──
     if cpu_utilization < 40:
         cpu_label = "🔴 Poor"
         cpu_meaning = "CPU is mostly idle (underutilized)."
@@ -65,11 +65,12 @@ def _run_fcfs(process_count, arrival_time, burst_time):
         cpu_label = "⚠️ High"
         cpu_meaning = "Very high CPU load."
 
-    # ── THROUGHPUT LABEL ────────────────────────────────
-    if throughput_val < 0.5:
+
+    # ── THROUGHPUT LABEL ──
+    if throughput < 0.5:
         throughput_label = "🔴 Low"
         throughput_meaning = "Few processes completed."
-    elif throughput_val <= 1:
+    elif throughput <= 1:
         throughput_label = "🟡 Moderate"
         throughput_meaning = "Balanced completion rate."
     else:
@@ -77,19 +78,14 @@ def _run_fcfs(process_count, arrival_time, burst_time):
         throughput_meaning = "Fast process completion."
 
     return dict(
-        process_count=process_count,
-        arrival_time=arrival_time,
-        burst_time=burst_time,
-        turnaround_time=turnaround_time,
-        waiting_time=waiting_time,
-        total_turnaround=total_turnaround,
-        total_waiting=total_waiting,
-        gantt_chart=gantt_chart,
-        gantt_time=gantt_time,
-        cpu_busy_time=cpu_busy_time,
+        process_count=process_count, arrival_time=arrival_time,
+        burst_time=burst_time, turnaround_time=turnaround_time,
+        waiting_time=waiting_time, total_turnaround=total_turnaround,
+        total_waiting=total_waiting, gantt_chart=gantt_chart,
+        gantt_time=gantt_time, cpu_busy_time=cpu_busy_time,
         cpu_idle_time=total_time - cpu_busy_time,
-        cpu_utilization=cpu_utilization,
-        throughput=throughput_val,
+        cpu_utilization=(cpu_busy_time / total_time) * 100,
+        throughput=process_count / total_time,
         avg_waiting_time=total_waiting / process_count,
         avg_turnaround_time=total_turnaround / process_count,
         cpu_label=cpu_label,
@@ -99,7 +95,7 @@ def _run_fcfs(process_count, arrival_time, burst_time):
     )
 
 
-# ── GUI ───────────────────────────────────────────────────
+# ── gui ───────────────────────────────────────────────────
 def _input_panel(win):
     section_header(win.body, "STEP 1  –  PROCESS COUNT", accent=ACCENT_G)
     count_bar, count_entry = Widgets.count_bar(win.body, "Number of processes")
@@ -119,17 +115,13 @@ def _input_panel(win):
     entry_rows = []
 
     def _build(n):
-        for w in table_host.winfo_children()[1:]:
-            w.destroy()
+        for w in table_host.winfo_children()[1:]: w.destroy()
         entry_rows.clear()
-
         for i in range(n):
             row = tk.Frame(table_host, bg=PANEL if i % 2 == 0 else CARD)
             row.pack(fill="x", pady=1)
-
             tk.Label(row, text=f"P{i+1}", bg=row["bg"], fg=ACCENT_G,
                      font=(MONO, 10, "bold"), width=8, anchor="w", padx=8).pack(side="left")
-
             entries = []
             for _ in range(2):
                 e = tk.Entry(row, bg=BORDER, fg=TEXT, insertbackground=ACCENT_G,
@@ -138,18 +130,14 @@ def _input_panel(win):
                              highlightbackground=BORDER)
                 e.pack(side="left", padx=(0, 8), pady=5)
                 entries.append(e)
-
             entry_rows.append(entries)
 
     def _confirm():
         try:
             n = int(count_entry.get())
-            if n < 1:
-                raise ValueError
+            if n < 1: raise ValueError
         except ValueError:
-            Widgets.error(win, "Process count must be a positive integer.")
-            return
-
+            Widgets.error(win, "Process count must be a positive integer."); return
         _build(n)
         win.set_status(f"{n} processes loaded – fill in times and press RUN")
 
@@ -169,98 +157,63 @@ def fcfs_gui():
     out = Output(Widgets.output_box(win.body, height=16, accent=ACCENT_G))
 
     def _run():
-        if not entry_rows:
-            Widgets.error(win, "Confirm process count first.")
-            return
-
+        if not entry_rows: Widgets.error(win, "Confirm process count first."); return
         arrival, burst = [], []
         for i, (at_e, bt_e) in enumerate(entry_rows):
             try:
-                at = int(at_e.get())
-                bt = int(bt_e.get())
-
-                if at < 0:
-                    raise ValueError("Arrival time cannot be negative.")
-                if bt <= 0:
-                    raise ValueError("Burst time must be positive.")
-
-                arrival.append(at)
-                burst.append(bt)
-
+                at = int(at_e.get()); bt = int(bt_e.get())
+                if at < 0: raise ValueError("Arrival time cannot be negative.")
+                if bt <= 0: raise ValueError("Burst time must be positive.")
+                arrival.append(at); burst.append(bt)
             except ValueError as e:
-                Widgets.error(win, f"P{i+1}: {e}")
-                return
-
+                Widgets.error(win, f"P{i+1}: {e}"); return
         _render(out, _run_fcfs(len(entry_rows), arrival, burst))
         win.set_status("Simulation complete", color=ACCENT_G)
 
     def _clear():
-        out.clear()
-        count_entry.delete(0, "end")
-        for w in table_host.winfo_children()[1:]:
-            w.destroy()
-        entry_rows.clear()
-        win.set_status("Cleared")
+        out.clear(); count_entry.delete(0, "end")
+        for w in table_host.winfo_children()[1:]: w.destroy()
+        entry_rows.clear(); win.set_status("Cleared")
 
-    Widgets.button(btn_row, "▶  RUN", _run, accent=ACCENT_G, width=14).pack(side="left", padx=(0, 8))
+    Widgets.button(btn_row, "▶  RUN",   _run,   accent=ACCENT_G, width=14).pack(side="left", padx=(0, 8))
     Widgets.button(btn_row, "✕  CLEAR", _clear, accent=ACCENT_R, width=12).pack(side="left")
-
     win.grab_set()
 
 
 def _render(out, r):
-    out.clear()
-    n = r["process_count"]
-
-    # ── GANTT CHART ─────────────────────────────
+    out.clear(); n = r["process_count"]
     out.line("  GANTT CHART", tag="header"); out.blank()
     bar = "  "
-    for p in r["gantt_chart"]:
-        bar += f"│{p:^6}"
+    for p in r["gantt_chart"]: bar += f"│{p:^6}"
     out.line(bar + "│", tag="accent")
-
     tl = "  "
-    for t in r["gantt_time"]:
-        tl += f"{t:<7}"
-    out.line(tl, tag="dim")
-    out.blank(); out.divider()
+    for t in r["gantt_time"]: tl += f"{t:<7}"
+    out.line(tl, tag="dim"); out.blank(); out.divider()
 
-    # ── PROCESS TABLE ───────────────────────────
     out.line("  PROCESS TABLE", tag="header"); out.blank()
     W = [6, 14, 12, 14, 14]
     out.table_row("PID","Arrival","Burst","Turnaround","Waiting", widths=W, tag="bold")
     out.divider("─", 62, tag="dim")
-
     for i in range(n):
-        out.table_row(f"P{i+1}",
-                      r["arrival_time"][i],
-                      r["burst_time"][i],
-                      r["turnaround_time"][i],
-                      r["waiting_time"][i],
-                      widths=W,
-                      tag="accent" if i % 2 == 0 else None)
-
+        out.table_row(f"P{i+1}", r["arrival_time"][i], r["burst_time"][i],
+                      r["turnaround_time"][i], r["waiting_time"][i],
+                      widths=W, tag="accent" if i%2==0 else None)
     out.divider("─", 62, tag="dim")
     out.table_row("Total","","", r["total_turnaround"], r["total_waiting"], widths=W, tag="bold")
     out.blank(); out.divider()
 
-    # ── PERFORMANCE ─────────────────────────────
     out.line("  SYSTEM PERFORMANCE", tag="header"); out.blank()
-    out.kv("CPU Busy Time", r["cpu_busy_time"])
-    out.kv("CPU Idle Time", r["cpu_idle_time"])
+    out.kv("CPU Busy Time",         r["cpu_busy_time"])
+    out.kv("CPU Idle Time",         r["cpu_idle_time"])
     out.kv("CPU Utilization (%)",
-           f"{r['cpu_utilization']:.2f} ({r['cpu_label']})")
+        f"{r['cpu_utilization']:.2f} ({r['cpu_label']})")
     out.line(f"    → {r['cpu_meaning']}", tag="dim")
     out.kv("Throughput",
-           f"{r['throughput']:.4f} ({r['throughput_label']})")
+        f"{r['throughput']:.4f} ({r['throughput_label']})")
     out.line(f"    → {r['throughput_meaning']}", tag="dim")
-    out.kv("Avg Waiting Time", f"{r['avg_waiting_time']:.2f}")
-    out.kv("Avg Turnaround Time", f"{r['avg_turnaround_time']:.2f}")
+    out.kv("Avg Waiting Time",      f"{r['avg_waiting_time']:.2f}")
+    out.kv("Avg Turnaround Time",   f"{r['avg_turnaround_time']:.2f}")
     out.blank()
 
-
 if __name__ == "__main__":
-    root = tk.Tk()
-    root.withdraw()
-    fcfs_gui()
-    root.mainloop()
+    root = tk.Tk(); root.withdraw(); fcfs_gui(); root.mainloop()
