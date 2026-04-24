@@ -37,6 +37,47 @@ F_DESC    = (MONO, 8)
 F_FOOTER  = (MONO, 8)
 F_VERSION = (MONO, 9)
 
+# ═══════════════════════════════════════════════════════════
+#  TTK STYLES (ADMIN / TABLE VIEWS)
+# ═══════════════════════════════════════════════════════════
+def setup_treeview_style():
+    """
+    Registers dark-themed Treeview styles that match
+    login text boxes and overall UI design.
+    Call ONCE before creating any Treeview.
+    """
+    style = ttk.Style()
+
+    # IMPORTANT: allows full manual colour control on Windows
+    try:
+        style.theme_use("default")
+    except:
+        pass
+
+    style.configure(
+        "Dark.Treeview",
+        background=BG,
+        fieldbackground=BG,
+        foreground=TEXT,
+        rowheight=26,
+        borderwidth=0,
+        font=(MONO, 10)
+    )
+
+    style.configure(
+        "Dark.Treeview.Heading",
+        background=PANEL,
+        foreground=TEXT,
+        font=(MONO, 9, "bold"),
+        relief="flat"
+    )
+
+    style.map(
+        "Dark.Treeview",
+        background=[("selected", ACCENT_B)],
+        foreground=[("selected", BG)]
+    )
+
 
 # ═══════════════════════════════════════════════════════════
 #  COLOUR HELPERS
