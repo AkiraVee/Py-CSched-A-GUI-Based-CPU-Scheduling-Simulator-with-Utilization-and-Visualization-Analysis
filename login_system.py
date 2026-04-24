@@ -15,46 +15,19 @@ import os
 import tkinter as tk
 from tkinter import messagebox, ttk
 
-# NOTE:
-# The database file was being created in unexpected directories because of two issues:
-#
-# 1) The database path must be anchored to this script’s location, not the current
-#    working directory. Using os.path.abspath(__file__) ensures SQLite always uses
-#    the same users.db file regardless of how the program is run.
-#
-# 2) Defining DATABASE_FILE = "users.db" again later in the file overwrote the correct
-#    absolute path and caused SQLite to silently create a new database elsewhere.
-#    There must be ONLY ONE definition of DATABASE_FILE.
-#
-# Correct usage:
-# BASE_DIR = os.path.dirname(os.path.abspath(__file__))
-# DATABASE_FILE = os.path.join(BASE_DIR, "users.db")
-
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 DATABASE_FILE = os.path.join(BASE_DIR, "users.db")
 
-# >>> ADD FOR ADMIN <<<
-# Reserved administrator username
 ADMIN_USERNAME = "admin"
 
-# =========================
-# >>> UI ADDITION <<<
-# Consistent CLI section header display (CLI ONLY)
-# =========================
 def display_header(title):
     print("\n==============================")
     print(f"{title:^30}")
     print("==============================")
 
-# =========================
-# SECURITY: PASSWORD HASHING
-# =========================
 def hash_password(password):
     return hashlib.sha256(password.encode()).hexdigest()
 
-# =========================
-# INITIALIZE DATABASE
-# =========================
 def initialize_database():
     conn = sqlite3.connect(DATABASE_FILE)
     cursor = conn.cursor()
@@ -70,34 +43,24 @@ def initialize_database():
     conn.commit()
     conn.close()
 
-# >>> ADD FOR ADMIN <<<
-# Schema migration safety
 def add_role_column_if_missing():
     conn = sqlite3.connect(DATABASE_FILE)
     cursor = conn.cursor()
     cursor.execute("PRAGMA table_info(users)")
     columns = [c[1] for c in cursor.fetchall()]
     if "role" not in columns:
-        cursor.execute(
-            "ALTER TABLE users ADD COLUMN role TEXT DEFAULT 'user'"
-        )
+        cursor.execute("ALTER TABLE users ADD COLUMN role TEXT DEFAULT 'user'")
         conn.commit()
     conn.close()
 
-# >>> ADD FOR ADMIN <<<
-# Default admin bootstrap
 def create_default_admin():
     conn = sqlite3.connect(DATABASE_FILE)
     cursor = conn.cursor()
-    cursor.execute(
-        "SELECT username FROM users WHERE username = ?",
-        (ADMIN_USERNAME,)
-    )
+    cursor.execute("SELECT username FROM users WHERE username = ?", (ADMIN_USERNAME,))
     if not cursor.fetchone():
         cursor.execute("""
             INSERT INTO users (
-                username, password,
-                security_question, security_answer, role
+                username, password, security_question, security_answer, role
             )
             VALUES (?, ?, ?, ?, ?)
         """, (
@@ -151,14 +114,7 @@ class App:
         tk.Button(self.container, text="Forgot Password?", command=self.show_forgot_screen,
                   fg="blue", relief="flat").pack(pady=6)
         
-        # >>> NEW: EXIT BUTTON <<<
-        tk.Button(
-            self.container,
-            text="Exit",
-            width=20,
-            fg="red",
-            command=self.exit_program
-        ).pack(pady=8)
+        tk.Button(self.container, text="Exit", width=20, fg="red", command=self.exit_program).pack(pady=8)
 
     def handle_login(self):
         username = self.u_entry.get()
@@ -166,10 +122,7 @@ class App:
 
         conn = sqlite3.connect(DATABASE_FILE)
         cursor = conn.cursor()
-        cursor.execute(
-            "SELECT password, role FROM users WHERE username = ?",
-            (username,)
-        )
+        cursor.execute("SELECT password, role FROM users WHERE username = ?", (username,))
         result = cursor.fetchone()
         conn.close()
 
@@ -215,10 +168,8 @@ class App:
         conn = sqlite3.connect(DATABASE_FILE)
         cursor = conn.cursor()
         try:
-            cursor.execute(
-                "INSERT INTO users VALUES (?, ?, ?, ?, ?)",
-                (u, hash_password(p), q, a, "user")
-            )
+            cursor.execute("INSERT INTO users VALUES (?, ?, ?, ?, ?)",
+                           (u, hash_password(p), q, a, "user"))
             conn.commit()
             messagebox.showinfo("Success", "Account created.")
             self.show_login_screen()
@@ -227,98 +178,166 @@ class App:
         finally:
             conn.close()
 
-    # ---------------- FORGOT PASSWORD ----------------
+    # ---------------- FORGOT PASSWORD FLOW ----------------
     def show_forgot_screen(self):
         self.clear_screen()
 
         tk.Label(self.container, text="RECOVER PASSWORD", font=("Arial", 16, "bold")).pack(pady=15)
-        tk.Label(self.container, text="Username").pack()
-        user_entry = tk.Entry(self.container, width=25)
-        user_entry.pack(pady=5)
+        tk.Label(self.container, text="Enter Username").pack(pady=5)
+        
+        self.forgot_user_entry = tk.Entry(self.container, width=25)
+        self.forgot_user_entry.pack(pady=5)
 
-        def verify_user():
-            conn = sqlite3.connect(DATABASE_FILE)
-            cursor = conn.cursor()
-            cursor.execute(
-                "SELECT security_question, security_answer FROM users WHERE username = ?",
-                (user_entry.get(),)
-            )
-            result = cursor.fetchone()
-            conn.close()
-
-            if not result:
-                messagebox.showerror("Error", "User not found.")
-            else:
-                self.show_reset_final(user_entry.get(), result[1], result[0])
-
-        tk.Button(self.container, text="Verify", width=20, command=verify_user).pack(pady=10)
+        tk.Button(self.container, text="Next", width=20, 
+                  command=self.verify_username_for_reset).pack(pady=10)
         tk.Button(self.container, text="Back", command=self.show_login_screen).pack()
 
-    def show_reset_final(self, username, correct_answer, question):
+    def verify_username_for_reset(self):
+        username = self.forgot_user_entry.get().strip()
+        if not username:
+            messagebox.showerror("Error", "Please enter a username.")
+            return
+
+        conn = sqlite3.connect(DATABASE_FILE)
+        cursor = conn.cursor()
+        cursor.execute(
+            "SELECT security_question, security_answer FROM users WHERE username = ?",
+            (username,)
+        )
+        result = cursor.fetchone()
+        conn.close()
+
+        if not result:
+            messagebox.showerror("Error", "User not found.")
+            return
+
+        # Go to security question screen
+        self.show_security_question_screen(username, result[0], result[1])
+
+    def show_security_question_screen(self, username, question, correct_answer):
         self.clear_screen()
 
-        tk.Label(self.container, text=question, wraplength=350).pack(pady=10)
-        answer_entry = tk.Entry(self.container, width=25)
-        answer_entry.pack(pady=5)
+        tk.Label(self.container, text="RECOVER PASSWORD", font=("Arial", 16, "bold")).pack(pady=10)
+        tk.Label(self.container, text=question, wraplength=350, justify="center").pack(pady=15)
 
-        tk.Label(self.container, text="New Password").pack(pady=5)
-        new_pw_entry = tk.Entry(self.container, show="*", width=25)
-        new_pw_entry.pack(pady=5)
+        tk.Label(self.container, text="Your Answer:").pack()
+        self.answer_entry = tk.Entry(self.container, width=30)
+        self.answer_entry.pack(pady=8)
 
-        def reset_password():
-            if answer_entry.get().lower() != correct_answer.lower():
-                messagebox.showerror("Error", "Incorrect answer.")
-                return
+        tk.Button(
+            self.container,
+            text="Verify Answer",
+            width=20,
+            command=lambda: self.verify_security_answer(username, correct_answer)
+        ).pack(pady=15)
 
-            conn = sqlite3.connect(DATABASE_FILE)
-            cursor = conn.cursor()
-            cursor.execute(
-                "UPDATE users SET password = ? WHERE username = ?",
-                (hash_password(new_pw_entry.get()), username)
+        tk.Button(self.container, text="Back", command=self.show_forgot_screen).pack()
+
+    def verify_security_answer(self, username, correct_answer):
+        user_answer = self.answer_entry.get().strip()
+
+        if not user_answer:
+            messagebox.showerror("Error", "Please enter your answer.")
+            return
+
+        if user_answer.lower() != correct_answer.lower():
+            messagebox.showerror("Error", "Incorrect security answer.")
+            return
+
+        # Correct answer → Move to NEW password screen
+        messagebox.showinfo("Success", "Security answer verified!\nNow set your new password.")
+        self.show_new_password_screen(username)
+
+    def show_new_password_screen(self, username):
+        """New dedicated screen for entering new password"""
+        self.clear_screen()
+
+        tk.Label(self.container, text="SET NEW PASSWORD", font=("Arial", 16, "bold")).pack(pady=15)
+        
+        tk.Label(self.container, text="Enter your new password:").pack(pady=5)
+        self.new_pw_entry = tk.Entry(self.container, show="*", width=30)
+        self.new_pw_entry.pack(pady=8)
+
+        tk.Label(self.container, text="Confirm new password:").pack(pady=5)
+        self.confirm_pw_entry = tk.Entry(self.container, show="*", width=30)
+        self.confirm_pw_entry.pack(pady=8)
+
+        button_frame = tk.Frame(self.container)
+        button_frame.pack(pady=20)
+
+        tk.Button(
+            button_frame,
+            text="Update Password",
+            width=18,
+            command=lambda: self.reset_password(username)
+        ).grid(row=0, column=0, padx=8)
+
+        tk.Button(
+            button_frame,
+            text="Back",
+            width=18,
+            command=lambda: self.show_security_question_screen(
+                username, 
+                self.get_question_for_user(username), 
+                self.get_answer_for_user(username)
             )
-            conn.commit()
-            conn.close()
-            messagebox.showinfo("Success", "Password updated.")
-            self.show_login_screen()
+        ).grid(row=0, column=1, padx=8)
 
-        tk.Button(self.container, text="Update Password", width=20, command=reset_password).pack(pady=10)
+    def get_question_for_user(self, username):
+        conn = sqlite3.connect(DATABASE_FILE)
+        cursor = conn.cursor()
+        cursor.execute("SELECT security_question FROM users WHERE username = ?", (username,))
+        result = cursor.fetchone()
+        conn.close()
+        return result[0] if result else ""
+
+    def get_answer_for_user(self, username):
+        conn = sqlite3.connect(DATABASE_FILE)
+        cursor = conn.cursor()
+        cursor.execute("SELECT security_answer FROM users WHERE username = ?", (username,))
+        result = cursor.fetchone()
+        conn.close()
+        return result[0] if result else ""
+
+    def reset_password(self, username):
+        new_password = self.new_pw_entry.get()
+        confirm_password = self.confirm_pw_entry.get()
+
+        if not new_password:
+            messagebox.showerror("Error", "Please enter a new password.")
+            return
+
+        if new_password != confirm_password:
+            messagebox.showerror("Error", "Passwords do not match.")
+            return
+
+        conn = sqlite3.connect(DATABASE_FILE)
+        cursor = conn.cursor()
+        cursor.execute(
+            "UPDATE users SET password = ? WHERE username = ?",
+            (hash_password(new_password), username)
+        )
+        conn.commit()
+        conn.close()
+
+        messagebox.showinfo("Success", "Password has been updated successfully.")
+        self.show_login_screen()
 
     # ---------------- ADMIN MENU ----------------
     def show_admin_menu(self):
-        """
-        Admin Control Panel (GUI).
-        Exposes existing admin capabilities:
-        - View all users
-        - Reset user password to default
-        - Promote user to admin
-        - Logout
-        Core database logic remains unchanged.
-        """
         self.clear_screen()
 
-        tk.Label(
-            self.container,
-            text="ADMIN CONTROL PANEL",
-            font=("Arial", 16, "bold")
-        ).pack(pady=10)
+        tk.Label(self.container, text="ADMIN CONTROL PANEL", 
+                 font=("Arial", 16, "bold")).pack(pady=10)
 
-        # =========================
-        # DATABASE VIEW (READ-ONLY)
-        # =========================
         table_frame = tk.Frame(self.container)
         table_frame.pack(pady=10)
 
-        tree = ttk.Treeview(
-            table_frame,
-            columns=("Username", "Role"),
-            show="headings",
-            height=8
-        )
+        tree = ttk.Treeview(table_frame, columns=("Username", "Role"), show="headings", height=8)
         tree.heading("Username", text="Username")
         tree.heading("Role", text="Role")
         tree.pack()
 
-        # Populate table from existing database
         conn = sqlite3.connect(DATABASE_FILE)
         cursor = conn.cursor()
         cursor.execute("SELECT username, role FROM users")
@@ -326,9 +345,6 @@ class App:
             tree.insert("", tk.END, values=row)
         conn.close()
 
-        # =========================
-        # ADMIN ACTIONS
-        # =========================
         action_frame = tk.Frame(self.container)
         action_frame.pack(pady=10)
 
@@ -336,71 +352,36 @@ class App:
         target_user = tk.Entry(action_frame, width=25)
         target_user.grid(row=0, column=1, pady=5)
 
-        # --- Promote User to Admin ---
         def promote_user():
             conn = sqlite3.connect(DATABASE_FILE)
             cursor = conn.cursor()
-            cursor.execute(
-                "UPDATE users SET role = 'admin' WHERE username = ?",
-                (target_user.get(),)
-            )
+            cursor.execute("UPDATE users SET role = 'admin' WHERE username = ?", (target_user.get(),))
             conn.commit()
             conn.close()
             messagebox.showinfo("Admin", "User promoted to admin (if exists).")
-            self.show_admin_menu()  # Refresh table
+            self.show_admin_menu()
 
-        # --- Reset User Password ---
         def reset_password():
             conn = sqlite3.connect(DATABASE_FILE)
             cursor = conn.cursor()
-            cursor.execute(
-                "UPDATE users SET password = ? WHERE username = ?",
-                (hash_password("Temp123"), target_user.get())
-            )
+            cursor.execute("UPDATE users SET password = ? WHERE username = ?",
+                           (hash_password("Temp123"), target_user.get()))
             conn.commit()
             conn.close()
-            messagebox.showinfo(
-                "Admin",
-                "Password reset to default: Temp123"
-            )
+            messagebox.showinfo("Admin", "Password reset to default: Temp123")
 
-        tk.Button(
-            action_frame,
-            text="Promote to Admin",
-            command=promote_user,
-            width=20
-        ).grid(row=1, column=0, pady=5)
+        tk.Button(action_frame, text="Promote to Admin", command=promote_user, width=20).grid(row=1, column=0, pady=5)
+        tk.Button(action_frame, text="Reset Password", command=reset_password, width=20).grid(row=1, column=1, pady=5)
 
-        tk.Button(
-            action_frame,
-            text="Reset Password",
-            command=reset_password,
-            width=20
-        ).grid(row=1, column=1, pady=5)
+        tk.Button(self.container, text="Logout", command=self.show_login_screen).pack(pady=15)
 
-        # =========================
-        # LOGOUT
-        # =========================
-        tk.Button(
-            self.container,
-            text="Logout",
-            command=self.show_login_screen
-        ).pack(pady=15)
-
-    # EXIT / CLOSE HANDLER (GUI)
     def exit_program(self):
-        """
-        Safely closes the application.
-        Asks for confirmation to prevent accidental exit.
-        """
-        if messagebox.askyesno(
-            "Exit Application",
-            "Are you sure you want to exit the program?"
-        ):
+        if messagebox.askyesno("Exit Application", "Are you sure you want to exit the program?"):
             self.root.destroy()
 
+
 # =========================
-# START PROGRAM (GUI ENTRY POINT)
+# START PROGRAM
 # =========================
 if __name__ == "__main__":
     initialize_database()
