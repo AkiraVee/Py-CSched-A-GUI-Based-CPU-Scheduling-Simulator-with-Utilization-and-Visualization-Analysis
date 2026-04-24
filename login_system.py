@@ -158,7 +158,7 @@ class App:
 
         if result and result[0] == hash_password(p):
             self.root.withdraw()
-            main_menu.open_main_menu(self.root)
+            main_menu.open_main_menu(self)
         else:
             messagebox.showerror("Login Failed", "Invalid credentials")
 

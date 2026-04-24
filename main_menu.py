@@ -52,12 +52,13 @@ def run_rr():
 #  MAIN MENU WINDOW (FIXED)
 # ═══════════════════════════════════════════════════════════
 
-def open_main_menu(root):
+def open_main_menu(app):
     """
     Opens the main menu as a Toplevel window.
     """
 
-    # 🔥 attach to existing root (FIX)
+    # 🔥 root is accessed via the app instance
+    root = app.root
     menu = tk.Toplevel(root)
     menu.title("CPU Scheduling Simulator")
     menu.geometry("520x540")
@@ -133,7 +134,7 @@ def open_main_menu(root):
     # ── FOOTER (FIXED EXIT BEHAVIOR) ─────────────────────
     build_footer(
         menu,
-        on_exit=lambda: [menu.destroy(), root.deiconify()]
+        on_exit=lambda: [menu.destroy(), app.show_login_screen(), root.deiconify()]
     )
 
 
@@ -144,5 +145,9 @@ def open_main_menu(root):
 if __name__ == "__main__":
     root = tk.Tk()
     root.withdraw()
-    open_main_menu(root)
+    # Mock app object for standalone testing
+    class MockApp:
+        def __init__(self, r): self.root = r
+        def show_login_screen(self): print("Login screen refreshed")
+    open_main_menu(MockApp(root))
     root.mainloop()
