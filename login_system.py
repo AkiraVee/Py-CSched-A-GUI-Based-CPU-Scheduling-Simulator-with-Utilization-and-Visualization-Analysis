@@ -108,6 +108,7 @@ class App:
                                 insertbackground=TEXT,
                                 relief="flat", width=28)
         self.u_entry.pack(pady=5)
+        self.u_entry.delete(0, tk.END)
 
         tk.Label(card, text="PASSWORD",
                  bg=PANEL, fg=SUBTEXT,
@@ -119,6 +120,7 @@ class App:
                                 insertbackground=TEXT,
                                 relief="flat", width=28)
         self.p_entry.pack(pady=5)
+        self.p_entry.delete(0, tk.END)
 
         # LOGIN BUTTONS
         algo_button(card, "Login",
