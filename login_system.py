@@ -143,6 +143,11 @@ class App:
         u = self.u_entry.get()
         p = self.p_entry.get()
 
+         # ── Reject login if username or password fields are empty ──
+        if not u or not p:
+            messagebox.showerror("Login Failed", "Username and password cannot be empty")
+            return
+
         conn = sqlite3.connect(DATABASE_FILE)
         cursor = conn.cursor()
         cursor.execute("SELECT password FROM users WHERE username=?", (u,))
@@ -209,6 +214,16 @@ class App:
         q = self.entries["Security Question"].get()
         a = self.entries["Answer"].get()
 
+         # ── Reject registration if any field is left blank ──
+        if not u or not p or not q or not a:
+            messagebox.showerror("Registration Failed", "All fields must be filled out")
+            return
+
+        # ── Enforce a minimum password length of 6 characters ──
+        if len(p) < 6:
+            messagebox.showerror("Registration Failed", "Password must be at least 6 characters")
+            return
+
         conn = sqlite3.connect(DATABASE_FILE)
         cursor = conn.cursor()
 
@@ -269,6 +284,11 @@ class App:
     def verify_user_for_reset(self):
         username = self.f_user.get()
 
+         # ── Reject if username field is empty before querying the database ──
+        if not username:
+            messagebox.showerror("Error", "Username cannot be empty")
+            return
+
         conn = sqlite3.connect(DATABASE_FILE)
         cursor = conn.cursor()
         cursor.execute("SELECT security_question, security_answer FROM users WHERE username=?", (username,))
@@ -316,6 +336,11 @@ class App:
         build_footer(self.container, on_exit=self.exit_program)
 
     def verify_answer(self, username, correct):
+        # ── Reject if the security answer field is left blank ──
+        if not self.sec_answer.get():
+            messagebox.showerror("Error", "Answer cannot be empty")
+            return
+
         if self.sec_answer.get().lower() != correct.lower():
             messagebox.showerror("Error", "Wrong answer")
             return
@@ -361,6 +386,16 @@ class App:
         build_footer(self.container, on_exit=self.exit_program)
 
     def update_password(self, username):
+        # ── Reject if either password field is blank before checking match ──
+        if not self.new_pw.get() or not self.confirm_pw.get():
+            messagebox.showerror("Error", "Password fields cannot be empty")
+            return
+
+        # ── Enforce a minimum password length of 6 characters on reset ──
+        if len(self.new_pw.get()) < 6:
+            messagebox.showerror("Error", "Password must be at least 6 characters")
+            return
+
         if self.new_pw.get() != self.confirm_pw.get():
             messagebox.showerror("Error", "Passwords do not match")
             return
