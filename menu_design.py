@@ -11,6 +11,7 @@ Import:
 """
 
 import tkinter as tk
+from tkinter import ttk  # NEW (needed for admin table)
 import math
 
 
