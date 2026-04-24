@@ -4,7 +4,6 @@ import os
 import tkinter as tk
 from tkinter import messagebox
 
-# ── DESIGN SYSTEM ─────────────────────────────
 from menu_design import (
     BG, PANEL, TEXT, SUBTEXT,
     ACCENT_B, ACCENT_G, ACCENT_R,
@@ -21,9 +20,7 @@ DATABASE_FILE = os.path.join(BASE_DIR, "users.db")
 ADMIN_USERNAME = "admin"
 
 
-# ═══════════════════════════════════════════════
-# DATABASE
-# ═══════════════════════════════════════════════
+# ═════════════════ DATABASE ═════════════════
 def hash_password(password):
     return hashlib.sha256(password.encode()).hexdigest()
 
@@ -64,9 +61,7 @@ def create_default_admin():
     conn.close()
 
 
-# ═══════════════════════════════════════════════
-# GUI APPLICATION
-# ═══════════════════════════════════════════════
+# ═════════════════ APP ═════════════════
 class App:
     def __init__(self, root):
         self.root = root
@@ -84,16 +79,12 @@ class App:
         for w in self.container.winfo_children():
             w.destroy()
 
-    # ═══════════════════════════════════════════
-    # LOGIN SCREEN
-    # ═══════════════════════════════════════════
+    # ═════════ LOGIN SCREEN ═════════
     def show_login_screen(self):
         self.clear()
 
-        # HEADER
         build_header(self.container)
 
-        # BODY
         body = tk.Frame(self.container, bg=BG)
         body.pack(fill="both", expand=True)
 
@@ -108,7 +99,6 @@ class App:
                  bg=PANEL, fg=TEXT,
                  font=(MONO, 14, "bold")).pack(pady=15)
 
-        # Username
         tk.Label(card, text="USERNAME",
                  bg=PANEL, fg=SUBTEXT,
                  font=(MONO, 9)).pack(anchor="w", padx=30)
@@ -119,7 +109,6 @@ class App:
                                 relief="flat", width=28)
         self.u_entry.pack(pady=5)
 
-        # Password
         tk.Label(card, text="PASSWORD",
                  bg=PANEL, fg=SUBTEXT,
                  font=(MONO, 9)).pack(anchor="w", padx=30)
@@ -131,44 +120,42 @@ class App:
                                 relief="flat", width=28)
         self.p_entry.pack(pady=5)
 
-        # BUTTONS (themed)
-        algo_button(card,
-                    "Login",
+        # LOGIN BUTTONS
+        algo_button(card, "Login",
                     "Authenticate and open system",
                     self.handle_login,
                     ACCENT_B)
 
-        algo_button(card,
-                    "Create Account",
-                    "Register a new user",
+        algo_button(card, "Create Account",
+                    "Register new user",
                     self.show_signup_screen,
                     ACCENT_G)
 
-        # FOOTER (always visible)
+        algo_button(card, "Forgot Password",
+                    "Recover account access",
+                    self.show_forgot_screen,
+                    ACCENT_R)
+
         build_footer(self.container, on_exit=self.exit_program)
 
-    # ═══════════════════════════════════════════
-    # LOGIN LOGIC
-    # ═══════════════════════════════════════════
+    # ═════════ LOGIN LOGIC ═════════
     def handle_login(self):
-        username = self.u_entry.get()
-        password = self.p_entry.get()
+        u = self.u_entry.get()
+        p = self.p_entry.get()
 
         conn = sqlite3.connect(DATABASE_FILE)
         cursor = conn.cursor()
-        cursor.execute("SELECT password FROM users WHERE username=?", (username,))
+        cursor.execute("SELECT password FROM users WHERE username=?", (u,))
         result = cursor.fetchone()
         conn.close()
 
-        if result and result[0] == hash_password(password):
+        if result and result[0] == hash_password(p):
             self.root.withdraw()
             main_menu.open_main_menu(self.root)
         else:
             messagebox.showerror("Login Failed", "Invalid credentials")
 
-    # ═══════════════════════════════════════════
-    # SIGNUP SCREEN
-    # ═══════════════════════════════════════════
+    # ═════════ SIGNUP SCREEN ═════════
     def show_signup_screen(self):
         self.clear()
 
@@ -204,23 +191,18 @@ class App:
             e.pack(pady=5)
             self.entries[f] = e
 
-        algo_button(card,
-                    "Register",
-                    "Create new account",
+        algo_button(card, "Register",
+                    "Create account",
                     self.handle_signup,
                     ACCENT_B)
 
-        algo_button(card,
-                    "Back to Login",
-                    "Return to login screen",
+        algo_button(card, "Back",
+                    "Return to login",
                     self.show_login_screen,
                     ACCENT_R)
 
         build_footer(self.container, on_exit=self.exit_program)
 
-    # ═══════════════════════════════════════════
-    # SIGNUP LOGIC
-    # ═══════════════════════════════════════════
     def handle_signup(self):
         u = self.entries["Username"].get()
         p = self.entries["Password"].get()
@@ -241,16 +223,164 @@ class App:
         finally:
             conn.close()
 
-    # ═══════════════════════════════════════════
-    # EXIT
-    # ═══════════════════════════════════════════
+    # ═════════ FORGOT PASSWORD FLOW ═════════
+    def show_forgot_screen(self):
+        self.clear()
+
+        build_header(self.container)
+
+        body = tk.Frame(self.container, bg=BG)
+        body.pack(fill="both", expand=True)
+
+        center = tk.Frame(body, bg=BG)
+        center.pack(expand=True)
+
+        card = tk.Frame(center, bg=PANEL)
+        card.pack(pady=20, padx=20)
+
+        tk.Label(card,
+                 text="RECOVER ACCOUNT",
+                 bg=PANEL, fg=TEXT,
+                 font=(MONO, 14, "bold")).pack(pady=15)
+
+        tk.Label(card, text="USERNAME",
+                 bg=PANEL, fg=SUBTEXT).pack(anchor="w", padx=30)
+
+        self.f_user = tk.Entry(card,
+                               bg=BG, fg=TEXT,
+                               insertbackground=TEXT,
+                               relief="flat", width=28)
+        self.f_user.pack(pady=5)
+
+        algo_button(card,
+                    "Next",
+                    "Verify username",
+                    self.verify_user_for_reset,
+                    ACCENT_B)
+
+        algo_button(card,
+                    "Back",
+                    "Return to login",
+                    self.show_login_screen,
+                    ACCENT_R)
+
+        build_footer(self.container, on_exit=self.exit_program)
+
+    def verify_user_for_reset(self):
+        username = self.f_user.get()
+
+        conn = sqlite3.connect(DATABASE_FILE)
+        cursor = conn.cursor()
+        cursor.execute("SELECT security_question, security_answer FROM users WHERE username=?", (username,))
+        data = cursor.fetchone()
+        conn.close()
+
+        if not data:
+            messagebox.showerror("Error", "User not found")
+            return
+
+        self.show_security_question(username, data[0], data[1])
+
+    def show_security_question(self, username, question, answer):
+        self.clear()
+
+        build_header(self.container)
+
+        body = tk.Frame(self.container, bg=BG)
+        body.pack(fill="both", expand=True)
+
+        center = tk.Frame(body, bg=BG)
+        center.pack(expand=True)
+
+        card = tk.Frame(center, bg=PANEL)
+        card.pack(pady=20, padx=20)
+
+        tk.Label(card,
+                 text=question,
+                 bg=PANEL, fg=TEXT,
+                 wraplength=300,
+                 font=(MONO, 10)).pack(pady=15)
+
+        self.sec_answer = tk.Entry(card,
+                                   bg=BG, fg=TEXT,
+                                   insertbackground=TEXT,
+                                   relief="flat", width=28)
+        self.sec_answer.pack(pady=5)
+
+        algo_button(card,
+                    "Verify",
+                    "Check security answer",
+                    lambda: self.verify_answer(username, answer),
+                    ACCENT_B)
+
+        build_footer(self.container, on_exit=self.exit_program)
+
+    def verify_answer(self, username, correct):
+        if self.sec_answer.get().lower() != correct.lower():
+            messagebox.showerror("Error", "Wrong answer")
+            return
+
+        self.show_new_password(username)
+
+    def show_new_password(self, username):
+        self.clear()
+
+        build_header(self.container)
+
+        body = tk.Frame(self.container, bg=BG)
+        body.pack(fill="both", expand=True)
+
+        center = tk.Frame(body, bg=BG)
+        center.pack(expand=True)
+
+        card = tk.Frame(center, bg=PANEL)
+        card.pack(pady=20, padx=20)
+
+        tk.Label(card, text="NEW PASSWORD",
+                 bg=PANEL, fg=TEXT,
+                 font=(MONO, 14, "bold")).pack(pady=15)
+
+        self.new_pw = tk.Entry(card, show="*",
+                               bg=BG, fg=TEXT,
+                               insertbackground=TEXT,
+                               relief="flat", width=28)
+        self.new_pw.pack(pady=5)
+
+        self.confirm_pw = tk.Entry(card, show="*",
+                                   bg=BG, fg=TEXT,
+                                   insertbackground=TEXT,
+                                   relief="flat", width=28)
+        self.confirm_pw.pack(pady=5)
+
+        algo_button(card,
+                    "Update Password",
+                    "Save new password",
+                    lambda: self.update_password(username),
+                    ACCENT_G)
+
+        build_footer(self.container, on_exit=self.exit_program)
+
+    def update_password(self, username):
+        if self.new_pw.get() != self.confirm_pw.get():
+            messagebox.showerror("Error", "Passwords do not match")
+            return
+
+        conn = sqlite3.connect(DATABASE_FILE)
+        cursor = conn.cursor()
+        cursor.execute("UPDATE users SET password=? WHERE username=?",
+                       (hash_password(self.new_pw.get()), username))
+        conn.commit()
+        conn.close()
+
+        messagebox.showinfo("Success", "Password updated")
+        self.show_login_screen()
+
+    # ═════════ EXIT ═════════
     def exit_program(self):
         self.root.destroy()
 
 
-# ═══════════════════════════════════════════════
-# RUN APP
-# ═══════════════════════════════════════════════
+# ═════════ RUN ═════════
 if __name__ == "__main__":
     initialize_database()
     create_default_admin()
