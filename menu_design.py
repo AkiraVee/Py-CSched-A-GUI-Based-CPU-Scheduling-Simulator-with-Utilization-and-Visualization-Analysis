@@ -1,35 +1,18 @@
-"""
-menu_design.py  –  Visual design layer for CPU Scheduling Simulator main menu
-=============================================================================
-Provides all colours, fonts, and UI widget builders used by cpu_scheduler_gui.py.
-
-Import:
-    from menu_design import (
-        BG, PANEL, BORDER, ACCENT_G, ACCENT_B, ACCENT_R, DIM, TEXT, SUBTEXT, MONO,
-        h_rule, algo_button, build_header, build_tab_bar, build_footer
-    )
-"""
-
 import tkinter as tk
-from tkinter import ttk  # NEW (needed for admin table)
+from tkinter import ttk
 import math
 
-
-# ═══════════════════════════════════════════════════════════
-#  PALETTE
-# ═══════════════════════════════════════════════════════════
 BG       = "#080b10"
 PANEL    = "#0d1017"
 BORDER   = "#1a2030"
-ACCENT_G = "#00ffa3"   # Non-Preemptive
-ACCENT_B = "#00c8ff"   # Preemptive
-ACCENT_R = "#ff4d6d"   # Exit / danger
+ACCENT_G = "#00ffa3"
+ACCENT_B = "#00c8ff"
+ACCENT_R = "#ff4d6d"
 DIM      = "#2a3245"
 TEXT     = "#d0d8e8"
 SUBTEXT  = "#4a5570"
 MONO     = "Consolas"
 
-# Font shortcuts
 F_TITLE   = (MONO, 14, "bold")
 F_TAB     = (MONO, 10, "bold")
 F_SECTION = (MONO, 9,  "bold")
@@ -38,53 +21,8 @@ F_DESC    = (MONO, 8)
 F_FOOTER  = (MONO, 8)
 F_VERSION = (MONO, 9)
 
-# ═══════════════════════════════════════════════════════════
-#  TTK STYLES (ADMIN / TABLE VIEWS)
-# ═══════════════════════════════════════════════════════════
-def setup_treeview_style():
-    """
-    Registers dark-themed Treeview styles that match
-    login text boxes and overall UI design.
-    Call ONCE before creating any Treeview.
-    """
-    style = ttk.Style()
 
-    # IMPORTANT: allows full manual colour control on Windows
-    try:
-        style.theme_use("default")
-    except:
-        pass
-
-    style.configure(
-        "Dark.Treeview",
-        background=BG,
-        fieldbackground=BG,
-        foreground=TEXT,
-        rowheight=26,
-        borderwidth=0,
-        font=(MONO, 10)
-    )
-
-    style.configure(
-        "Dark.Treeview.Heading",
-        background=PANEL,
-        foreground=TEXT,
-        font=(MONO, 9, "bold"),
-        relief="flat"
-    )
-
-    style.map(
-        "Dark.Treeview",
-        background=[("selected", ACCENT_B)],
-        foreground=[("selected", BG)]
-    )
-
-
-# ═══════════════════════════════════════════════════════════
-#  COLOUR HELPERS
-# ═══════════════════════════════════════════════════════════
 def hex_blend(base: str, target: str, t: float) -> str:
-    """Linear interpolate between two hex colours by factor t (0–1)."""
     br = int(base[1:3], 16);   bg_ = int(base[3:5], 16);   bb = int(base[5:7], 16)
     tr = int(target[1:3], 16); tg  = int(target[3:5], 16); tb = int(target[5:7], 16)
     return (f"#{int(br + (tr - br) * t):02x}"
@@ -92,23 +30,11 @@ def hex_blend(base: str, target: str, t: float) -> str:
             f"{int(bb + (tb - bb) * t):02x}")
 
 
-# ═══════════════════════════════════════════════════════════
-#  BASIC WIDGETS
-# ═══════════════════════════════════════════════════════════
 def h_rule(parent, color=BORDER):
-    """Single-pixel horizontal divider."""
     tk.Frame(parent, bg=color, height=1).pack(fill="x")
 
 
-# ═══════════════════════════════════════════════════════════
-#  ALGO BUTTON ROW  (with pulsing glow on hover)
-# ═══════════════════════════════════════════════════════════
 def algo_button(parent, label: str, desc: str, command, accent: str):
-    """
-    Clickable algorithm row with animated glow on hover.
-
-    Layout:  [accent stripe | title + desc | arrow ›]
-    """
     row = tk.Frame(parent, bg=PANEL, cursor="hand2")
     row.pack(fill="x", padx=0, pady=3)
 
@@ -129,7 +55,6 @@ def algo_button(parent, label: str, desc: str, command, accent: str):
                      font=(MONO, 18), padx=14)
     arrow.pack(side="right")
 
-    # ── collect all child widgets ──
     def _all(w):
         out = [w]
         try:
@@ -137,7 +62,6 @@ def algo_button(parent, label: str, desc: str, command, accent: str):
         except Exception: pass
         return out
 
-    # ── glow animation ────────────────────────────────────
     _hovering = [False]
     _tick     = [0]
 
@@ -177,35 +101,18 @@ def algo_button(parent, label: str, desc: str, command, accent: str):
     h_rule(parent, BORDER)
 
 
-# ═══════════════════════════════════════════════════════════
-#  HEADER  (top accent bar + title row)
-# ═══════════════════════════════════════════════════════════
 def build_header(parent):
-    """
-    Builds and packs the top accent bar + title/version row.
-    Returns nothing – widgets are packed directly onto parent.
-    """
     tk.Frame(parent, bg=ACCENT_G, height=2).pack(fill="x")
-
     hdr = tk.Frame(parent, bg=PANEL, padx=24, pady=16)
     hdr.pack(fill="x")
     tk.Label(hdr, text="◈  CPU SCHEDULING SIMULATOR",
              bg=PANEL, fg=TEXT, font=F_TITLE).pack(side="left")
     tk.Label(hdr, text="v1.0",
              bg=PANEL, fg=SUBTEXT, font=F_VERSION).pack(side="right", pady=4)
-
     h_rule(parent, BORDER)
 
 
-# ═══════════════════════════════════════════════════════════
-#  TAB BAR  (NON-PREEMPTIVE / PREEMPTIVE switcher)
-# ═══════════════════════════════════════════════════════════
 def build_tab_bar(parent, content_host, np_panel, pre_panel):
-    """
-    Builds and packs the tab switcher bar.
-    Handles all switching logic internally.
-    Returns (tab_np_label, tab_pre_label) in case caller needs them.
-    """
     tab_bar = tk.Frame(parent, bg=PANEL)
     tab_bar.pack(fill="x")
 
@@ -238,41 +145,62 @@ def build_tab_bar(parent, content_host, np_panel, pre_panel):
     tab_pre.bind("<Leave>", lambda _: tab_pre.configure(fg=DIM)
                             if tab_pre.cget("fg") == str(TEXT) else None)
 
-    # default: NP active
     np_panel.place(relx=0, rely=0, relwidth=1, relheight=1)
     _active[0] = np_panel
 
     return tab_np, tab_pre
 
 
-# ═══════════════════════════════════════════════════════════
-#  SECTION HEADER  (label above algo card)
-# ═══════════════════════════════════════════════════════════
 def build_section_header(parent, title: str, subtitle: str, accent: str):
-    """Coloured section title + faint subtitle on the right."""
     row = tk.Frame(parent, bg=BG, padx=24, pady=14)
     row.pack(fill="x")
     tk.Label(row, text=title,    bg=BG, fg=accent,  font=F_SECTION).pack(side="left")
-    tk.Label(row, text=subtitle, bg=BG, fg=SUBTEXT,  font=F_DESC).pack(side="right")
+    tk.Label(row, text=subtitle, bg=BG, fg=SUBTEXT, font=F_DESC).pack(side="right")
     h_rule(parent, BORDER)
 
 
-# ═══════════════════════════════════════════════════════════
-#  FOOTER  (status dot + exit button)
-# ═══════════════════════════════════════════════════════════
+def styled_entry(parent, show="", width=28, accent=ACCENT_B):
+    e = tk.Entry(parent, show=show, bg=BORDER, fg=TEXT,
+                 insertbackground=accent, relief="flat",
+                 font=(MONO, 11), width=width,
+                 highlightthickness=1,
+                 highlightcolor=accent,
+                 highlightbackground=PANEL)
+    return e
+
+
+def styled_label(parent, text, size=9, color=None):
+    tk.Label(parent, text=text, bg=PANEL,
+             fg=color or SUBTEXT,
+             font=(MONO, size, "bold")).pack(anchor="w", padx=30, pady=(8, 0))
+
+
+def setup_treeview_style():
+    style = ttk.Style()
+    style.theme_use("clam")
+    style.configure("Dark.Treeview",
+                    background=PANEL,
+                    foreground=TEXT,
+                    fieldbackground=PANEL,
+                    bordercolor=BORDER,
+                    rowheight=28,
+                    font=(MONO, 10))
+    style.configure("Dark.Treeview.Heading",
+                    background=BORDER,
+                    foreground=ACCENT_G,
+                    relief="flat",
+                    font=(MONO, 9, "bold"))
+    style.map("Dark.Treeview",
+              background=[("selected", ACCENT_B)],
+              foreground=[("selected", BG)])
+
+
 def build_footer(parent, on_exit):
-    """
-    Builds and packs the bottom footer bar.
-    on_exit: callable triggered by the EXIT button.
-    """
     h_rule(parent, BORDER)
-
     foot = tk.Frame(parent, bg=PANEL, padx=20, pady=10)
     foot.pack(fill="x", side="bottom")
-
     tk.Label(foot, text="●  READY", bg=PANEL, fg=ACCENT_G,
              font=F_FOOTER).pack(side="left")
-
     exit_btn = tk.Label(foot, text="[ EXIT ]", bg=PANEL, fg=ACCENT_R,
                         font=(MONO, 9, "bold"), padx=8, cursor="hand2")
     exit_btn.pack(side="right")
