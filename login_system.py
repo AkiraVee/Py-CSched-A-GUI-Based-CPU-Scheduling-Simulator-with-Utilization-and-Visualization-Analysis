@@ -213,7 +213,7 @@ def open_admin_panel(app):
     logout_btn.bind("<Button-1>", lambda _: _close_panel())
     logout_btn.bind("<Enter>",    lambda _: logout_btn.configure(bg=ACCENT_B, fg=BG))
     logout_btn.bind("<Leave>",    lambda _: logout_btn.configure(bg=PANEL, fg=ACCENT_B))
-    
+
     root.withdraw()  # hide main window until login is successful
 
 
@@ -246,7 +246,7 @@ class App:
     def __init__(self, root):
         self.root = root
         self.root.title("CPU Scheduling System")
-        self.root.geometry("520x580")
+        self.root.geometry("540x620")
         self.root.resizable(False, False)
         self.root.configure(bg=BG)
 
