@@ -5,6 +5,7 @@ from theme import (
     ACCENT_G, ACCENT_R, ACCENT_Y, BG, PANEL, CARD, BORDER, TEXT, SUBTEXT, MONO
 )
 
+
 def _run_fcfs(process_count, arrival_time, burst_time):
     processes = list(range(process_count))
     processes.sort(key=lambda x: arrival_time[x])
@@ -37,8 +38,8 @@ def _run_fcfs(process_count, arrival_time, burst_time):
 
     cpu_busy_time = sum(burst_time)
     total_time    = gantt_time[-1]
-    cpu_utilization = (cpu_busy_time / total_time) * 100 if total_time > 0 else 0
-    throughput = process_count / total_time if total_time > 0 else 0
+    cpu_utilization = (cpu_busy_time / total_time) * 100
+    throughput = process_count / total_time
 
     if cpu_utilization < 40:
         cpu_label = "Poor"; cpu_meaning = "CPU is mostly idle (underutilized)."
@@ -69,6 +70,7 @@ def _run_fcfs(process_count, arrival_time, burst_time):
         cpu_label=cpu_label, cpu_meaning=cpu_meaning,
         throughput_label=throughput_label, throughput_meaning=throughput_meaning,
     )
+
 
 def _input_panel(win):
     section_header(win.body, "STEP 1  –  PROCESS COUNT", accent=ACCENT_G)
@@ -133,17 +135,10 @@ def _input_panel(win):
     Widgets.button(count_bar, "RANDOM",   _randomize, accent=ACCENT_Y, width=10).pack(side="left", padx=(0, 10))
     return entry_rows, table_host, count_entry
 
-def fcfs_gui():
-    # Initialize the window
-    win = AlgoWindow("FCFS  –  First Come First Serve", accent=ACCENT_G, width=800, height=660)
-    
-    # MAKE FULLSCREEN (Maximized)
-    # Use 'zoomed' for Windows, for Linux use win.attributes('-zoomed', True)
-    try:
-        win.state('zoomed')
-    except tk.TclError:
-        win.attributes('-zoomed', True)
 
+def fcfs_gui():
+    win = AlgoWindow("FCFS  –  First Come First Serve", accent=ACCENT_G, width=800, height=660)
+    win.state("zoomed")
     entry_rows, table_host, count_entry = _input_panel(win)
 
     h_rule(win.body, BORDER)
@@ -151,11 +146,7 @@ def fcfs_gui():
     btn_row.pack(fill="x", padx=16)
 
     section_header(win.body, "OUTPUT", subtitle="gantt chart · process table · performance", accent=ACCENT_G)
-    
-    # Output box set to expand to fill vertical space in fullscreen
-    out_widget = Widgets.output_box(win.body, height=16, accent=ACCENT_G)
-    out_widget.pack(fill="both", expand=True, padx=16, pady=(0, 16))
-    out = Output(out_widget)
+    out = Output(Widgets.output_box(win.body, height=32, accent=ACCENT_G))
 
     def _run():
         if not entry_rows: Widgets.error(win, "Confirm process count first."); return
@@ -179,6 +170,7 @@ def fcfs_gui():
     Widgets.button(btn_row, "▶  RUN",   _run,   accent=ACCENT_G, width=14).pack(side="left", padx=(0, 8))
     Widgets.button(btn_row, "✕  CLEAR", _clear, accent=ACCENT_R, width=12).pack(side="left")
     win.grab_set()
+
 
 def _render(out, r):
     out.clear(); n = r["process_count"]
