@@ -2,7 +2,7 @@ import sqlite3
 import hashlib
 import os
 import tkinter as tk
-from tkinter import messagebox
+from tkinter import messagebox, ttk # needed for the admin table
 
 from menu_design import (
     BG, PANEL, TEXT, SUBTEXT,
@@ -60,6 +60,120 @@ def create_default_admin():
 
     conn.close()
 
+
+# NEW: ADMIN CONTROL PANEL
+def open_admin_panel(app):
+    from menu_design import setup_treeview_style
+    setup_treeview_style()  # added this so it call once
+
+    admin_win = tk.Toplevel(app.root)
+    admin_win.title("Admin Control Panel")
+    admin_win.geometry("520x540")
+    admin_win.configure(bg=BG)
+
+    build_header(admin_win)
+
+    container = tk.Frame(admin_win, bg=BG)
+    container.pack(fill="both", expand=True, side="top")  # keep footer visible
+
+    tk.Label(
+        container,
+        text="ADMIN CONTROL PANEL",
+        bg=BG, fg=TEXT,
+        font=(MONO, 14, "bold")
+    ).pack(pady=10)
+
+    # ── USER TABLE ─────────────────────────
+    table_frame = tk.Frame(container, bg=BG)
+    table_frame.pack(pady=10)
+
+    tree = ttk.Treeview(
+    table_frame,
+    columns=("Username", "Role"),
+    show="headings",
+    height=12,
+    style="Dark.Treeview"
+    )
+    
+    tree.heading("Username", text="Username")
+    tree.heading("Role", text="Role")
+
+    tree.column("Username", width=220, anchor="w")
+    tree.column("Role", width=100, anchor="center")
+
+    tree.pack(fill="x", expand=True)
+
+    def load_users():
+        for row in tree.get_children():
+            tree.delete(row)
+        conn = sqlite3.connect(DATABASE_FILE)
+        cursor = conn.cursor()
+        cursor.execute("SELECT username, role FROM users")
+        for row in cursor.fetchall():
+            tree.insert("", tk.END, values=row)
+        conn.close()
+
+    load_users()
+
+    # ── ACTIONS ────────────────────────────
+    action_frame = tk.Frame(container, bg=BG)
+    action_frame.pack(pady=10)
+
+    # grid-only subframe
+    form_frame = tk.Frame(action_frame, bg=BG)
+    form_frame.pack()
+
+    tk.Label(
+        form_frame,
+        text="Target Username:",
+        bg=BG, fg=TEXT
+    ).grid(row=0, column=0, padx=5, pady=5)
+
+    target_user = tk.Entry(form_frame)
+    target_user.grid(row=0, column=1, padx=5, pady=5)
+
+    # pack-only subframe
+    button_frame = tk.Frame(action_frame, bg=BG)
+    button_frame.pack(pady=10)
+
+    def promote_user():
+        conn = sqlite3.connect(DATABASE_FILE)
+        cursor = conn.cursor()
+        cursor.execute(
+            "UPDATE users SET role='admin' WHERE username=?",
+            (target_user.get(),)
+        )
+        conn.commit()
+        conn.close()
+        load_users()
+
+    def reset_password():
+        conn = sqlite3.connect(DATABASE_FILE)
+        cursor = conn.cursor()
+        cursor.execute(
+            "UPDATE users SET password=? WHERE username=?",
+            (hash_password("Temp123"), target_user.get())
+        )
+        conn.commit()
+        conn.close()
+
+    algo_button(
+        button_frame,          # FIXED
+        "Promote to Admin",
+        "Grant admin privileges",
+        promote_user,
+        ACCENT_G
+    )
+
+    algo_button(
+        button_frame,          # FIXED
+        "Reset Password",
+        "Reset to Temp123",
+        reset_password,
+        ACCENT_B
+    )
+
+    build_footer(admin_win, on_exit=admin_win.destroy)
 
 # ═════════════════ APP ═════════════════
 class App:
@@ -158,6 +272,12 @@ class App:
 
         if result and result[0] == hash_password(p):
             self.root.withdraw()
+
+            # ✅ NEW: admin routed first
+            if result[1] == "admin":
+                open_admin_panel(self)
+                return   # STOP HERE for admin
+            
             main_menu.open_main_menu(self)
         else:
             messagebox.showerror("Login Failed", "Invalid credentials")

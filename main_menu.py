@@ -13,6 +13,8 @@ import round_robin_algorithm
 import np_priosched_algorithm
 import pre_priosched_algorithm
 import sjf_algorithm
+# NEW: import admin panel from login file
+from login_system import open_admin_panel
 
 # ── design module ─────────────────────────────────────────
 from menu_design import (
@@ -60,6 +62,8 @@ def open_main_menu(app):
     # 🔥 root is accessed via the app instance
     root = app.root
     menu = tk.Toplevel(root)
+     # ✅ NEW: check admin role
+    is_admin = getattr(app, "current_user_role", "user") == "admin" # added to differentiate admin from user
     menu.title("CPU Scheduling Simulator")
     menu.geometry("520x540")
     menu.resizable(False, False)
@@ -130,6 +134,27 @@ def open_main_menu(app):
 
     # ── TAB BAR ──────────────────────────────────────────
     build_tab_bar(menu, content_host, np_panel, pre_panel)
+
+    # NEW: ADMIN PANEL (ONLY FOR ADMIN)
+    if is_admin:
+        admin_section = tk.Frame(content_host, bg=BG)
+        admin_section.pack(fill="x")
+
+        build_section_header(
+            admin_section,
+            "ADMIN PANEL",
+            "system management tools",
+            ACCENT_B
+        )
+
+        card_admin = tk.Frame(admin_section, bg=PANEL)
+        card_admin.pack(fill="x", padx=16, pady=10)
+
+        algo_button(card_admin,
+                    "Open Admin Panel",
+                    "Manage users, reset passwords, promote accounts",
+                    lambda: open_admin_panel(app),
+                    ACCENT_B)
 
     # ── FOOTER (FIXED EXIT BEHAVIOR) ─────────────────────
     build_footer(
