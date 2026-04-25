@@ -27,9 +27,9 @@ def _run_rr(process_count, arrival_time, burst_time, time_quantum):
                 queue.append(i); entered[i]=True
         if not queue:
             start=current_time; current_time+=1; cpu_idle_time+=1; end=current_time
-            if gantt_chart and gantt_chart[-1][0]=="ID" and gantt_chart[-1][2]==start:
-                gantt_chart[-1]=("ID",gantt_chart[-1][1],end)
-            else: gantt_chart.append(("ID",start,end))
+            if gantt_chart and gantt_chart[-1][0]=="IDLE" and gantt_chart[-1][2]==start:
+                gantt_chart[-1]=("IDLE",gantt_chart[-1][1],end)
+            else: gantt_chart.append(("IDLE",start,end))
             continue
         current=queue.pop(0)
         if start_time[current]==-1: start_time[current]=current_time

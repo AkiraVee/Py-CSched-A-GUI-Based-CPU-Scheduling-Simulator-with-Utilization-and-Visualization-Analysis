@@ -23,8 +23,8 @@ def _run_npp(process_count, arrival_time, burst_time, priority_list):
     while done < process_count:
         ready=[i for i in range(process_count) if arrival_time[i]<=current_time and not completed[i]]
         if not ready:
-            if gantt_chart and gantt_chart[-1][0]=="ID": gantt_chart[-1][2]=current_time+1
-            else: gantt_chart.append(["ID",current_time,current_time+1])
+            if gantt_chart and gantt_chart[-1][0]=="IDLE": gantt_chart[-1][2]=current_time+1
+            else: gantt_chart.append(["IDLE",current_time,current_time+1])
             current_time+=1; gantt_time.append(current_time); continue
         idx=ready[0]
         for i in ready:

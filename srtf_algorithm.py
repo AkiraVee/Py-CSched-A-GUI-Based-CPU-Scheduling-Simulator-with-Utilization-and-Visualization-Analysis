@@ -27,7 +27,7 @@ def _run_srtf(process_count, arrival_time, burst_time):
             if arrival_time[i]<=current_time and remaining[i]>0:
                 if remaining[i]<min_remaining: min_remaining=remaining[i]; idx=i
         if idx==-1:
-            label="ID"
+            label="IDLE"
             if last_label!=label:
                 if last_label is not None: gantt.append((last_label,segment_start,current_time))
                 segment_start=current_time; last_label=label

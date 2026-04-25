@@ -26,9 +26,9 @@ def _run_pp(n, arrival, burst, priority):
             if arrival[i]<=time and remaining[i]>0:
                 if priority[i]<best: best=priority[i]; idx=i
         if idx==-1:
-            if gantt and gantt[-1][0]=="ID": gantt[-1][2]+=1
-            else: gantt.append(["ID",time,time+1])
-            time+=1; last="ID"; continue
+            if gantt and gantt[-1][0]=="IDLE": gantt[-1][2]+=1
+            else: gantt.append(["IDLE",time,time+1])
+            time+=1; last="IDLE"; continue
         label=f"P{idx+1}"
         if start[idx]==-1: start[idx]=time
         if gantt and gantt[-1][0]==label: gantt[-1][2]+=1
