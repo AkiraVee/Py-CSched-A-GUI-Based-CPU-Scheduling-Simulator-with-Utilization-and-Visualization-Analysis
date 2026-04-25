@@ -7,13 +7,13 @@ from theme import (
 
 
 def _perf_labels(cpu_util, throughput):
-    if cpu_util < 40:    cpu_label, cpu_meaning = "Poor",     "CPU is mostly idle (underutilized)."
-    elif cpu_util < 70:  cpu_label, cpu_meaning = "Fair",     "Moderate CPU usage."
-    elif cpu_util <= 90: cpu_label, cpu_meaning = "Good",     "Efficient CPU usage."
-    else:                cpu_label, cpu_meaning = "High",     "Very high CPU load."
-    if throughput < 0.5: tp_label,  tp_meaning  = "Low",      "Few processes completed."
+    if cpu_util < 40:    cpu_label, cpu_meaning = "Poor",      "CPU is mostly idle (underutilized)."
+    elif cpu_util < 70:  cpu_label, cpu_meaning = "Fair",      "Moderate CPU usage."
+    elif cpu_util <= 90: cpu_label, cpu_meaning = "Good",      "Efficient CPU usage."
+    else:                cpu_label, cpu_meaning = "High",      "Very high CPU load."
+    if throughput < 0.5: tp_label,  tp_meaning  = "Low",       "Few processes completed."
     elif throughput <= 1:tp_label,  tp_meaning  = "Moderate", "Balanced completion rate."
-    else:                tp_label,  tp_meaning  = "High",     "Fast process completion."
+    else:                tp_label,  tp_meaning  = "High",      "Fast process completion."
     return cpu_label, cpu_meaning, tp_label, tp_meaning
 
 
@@ -68,6 +68,12 @@ def _run_rr(process_count, arrival_time, burst_time, time_quantum):
 
 def round_robin_gui():
     win = AlgoWindow("Round Robin  –  Preemptive", accent=ACCENT_B, width=800, height=700)
+
+    # FULL SCREEN LOGIC
+    try:
+        win.state('zoomed') # For Windows
+    except tk.TclError:
+        win.attributes('-zoomed', True) # For Linux
 
     section_header(win.body,"STEP 1  –  PROCESS COUNT",accent=ACCENT_B)
     count_bar,count_entry=Widgets.count_bar(win.body,"Number of processes")
@@ -131,8 +137,13 @@ def round_robin_gui():
     Widgets.button(count_bar,"RANDOM",_randomize,accent=ACCENT_Y,width=10).pack(side="left",padx=(0,10))
     h_rule(win.body,BORDER)
     btn_row=tk.Frame(win.body,bg=BG,pady=8); btn_row.pack(fill="x",padx=16)
+    
     section_header(win.body,"OUTPUT",subtitle="gantt chart · process table · performance",accent=ACCENT_B)
-    out=Output(Widgets.output_box(win.body,height=16,accent=ACCENT_B))
+    
+    # Adjusted output box to fill remaining vertical space
+    out_widget = Widgets.output_box(win.body,height=16,accent=ACCENT_B)
+    out_widget.pack(fill="both", expand=True, padx=16, pady=(0, 16))
+    out=Output(out_widget)
 
     def _run():
         if not entry_rows: Widgets.error(win,"Confirm process count first."); return
@@ -152,26 +163,26 @@ def round_robin_gui():
         win.set_status("Simulation complete",color=ACCENT_B)
 
     def _clear():
-        out.clear(); count_entry.delete(0,"end"); tq_entry.delete(0,"end")
+        out.clear(); count_entry.delete(0, "end"); tq_entry.delete(0, "end")
         for w in table_host.winfo_children()[1:]: w.destroy()
         entry_rows.clear(); win.set_status("Cleared")
 
-    Widgets.button(btn_row,"▶  RUN",_run,accent=ACCENT_B,width=14).pack(side="left",padx=(0,8))
-    Widgets.button(btn_row,"✕  CLEAR",_clear,accent=ACCENT_R,width=12).pack(side="left")
+    Widgets.button(btn_row,"▶   RUN",_run,accent=ACCENT_B,width=14).pack(side="left",padx=(0,8))
+    Widgets.button(btn_row,"✕   CLEAR",_clear,accent=ACCENT_R,width=12).pack(side="left")
     win.grab_set()
 
 
 def _render(out,r):
     out.clear(); n=r["process_count"]
-    out.line(f"  GANTT CHART   (quantum = {r['time_quantum']})",tag="header"); out.blank()
-    bar="  "
+    out.line(f"   GANTT CHART    (quantum = {r['time_quantum']})",tag="header"); out.blank()
+    bar="   "
     for g in r["gantt_chart"]: bar+=f"│{g[0]:^6}"
     out.line(bar+"│",tag="accent")
-    tl="  "
+    tl="   "
     for g in r["gantt_chart"]: tl+=f"{g[1]:<7}"
     tl+=str(r["gantt_chart"][-1][2])
     out.line(tl,tag="dim"); out.blank(); out.divider()
-    out.line("  PROCESS TABLE",tag="header"); out.blank()
+    out.line("   PROCESS TABLE",tag="header"); out.blank()
     W=[6,14,12,14,14]
     out.table_row("PID","Arrival","Burst","Turnaround","Waiting",widths=W,tag="bold")
     out.divider("─",62,tag="dim")
@@ -182,7 +193,7 @@ def _render(out,r):
     out.divider("─",62,tag="dim")
     out.table_row("Total","","",r["total_turnaround"],r["total_waiting"],widths=W,tag="bold")
     out.blank(); out.divider()
-    out.line("  SYSTEM PERFORMANCE",tag="header"); out.blank()
+    out.line("   SYSTEM PERFORMANCE",tag="header"); out.blank()
     out.kv("CPU Busy Time",       r["cpu_busy_time"])
     out.kv("CPU Idle Time",       r["cpu_idle_time"])
     out.kv("CPU Utilization (%)", f"{r['cpu_utilization']:.2f}  [{r['cpu_label']}]")
