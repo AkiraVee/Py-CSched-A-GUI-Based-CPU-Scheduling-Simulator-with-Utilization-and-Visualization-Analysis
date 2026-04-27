@@ -6,6 +6,33 @@ from theme import (
 )
 
 
+
+# ─────────────────────────────────────────────
+#  PERFORMANCE LABEL HELPER
+# ─────────────────────────────────────────────
+# Converts raw CPU utilization and throughput values
+# into readable labels and explanations.
+def _perf_labels(cpu_util, throughput):
+
+    if cpu_util < 40:
+        cpu_label, cpu_meaning = "Poor", "CPU is mostly idle (underutilized)."
+    elif cpu_util < 70:
+        cpu_label, cpu_meaning = "Fair", "Moderate CPU usage."
+    elif cpu_util <= 90:
+        cpu_label, cpu_meaning = "Good", "Efficient CPU usage."
+    else:
+        cpu_label, cpu_meaning = "High", "Very high CPU load."
+
+    if throughput < 0.5:
+        tp_label, tp_meaning = "Low", "Few processes completed."
+    elif throughput <= 1:
+        tp_label, tp_meaning = "Moderate", "Balanced completion rate."
+    else:
+        tp_label, tp_meaning = "High", "Fast process completion."
+
+    return cpu_label, cpu_meaning, tp_label, tp_meaning
+
+
 # ─────────────────────────────────────────────
 #  FCFS (FIRST COME FIRST SERVE)
 # ─────────────────────────────────────────────
@@ -22,107 +49,90 @@ from theme import (
 #   burst_time    : list  → CPU burst times
 def _run_fcfs(process_count, arrival_time, burst_time):
 
-    # STEP 1: Sort processes based on arrival time
     processes = list(range(process_count))
     processes.sort(key=lambda x: arrival_time[x])
 
-    # Initialize tracking arrays
-    start_time   = [0] * process_count
-    finish_time  = [0] * process_count
+    start_time = [0] * process_count
+    finish_time = [0] * process_count
     current_time = 0
 
-    # Gantt chart representation
-    gantt_chart = []   # process labels
-    gantt_time  = [0]  # time markers
+    gantt_chart = []
+    gantt_time = [0]
 
-    # ── MAIN EXECUTION LOOP ───────────────────
     for i in processes:
 
-        # STEP 2: Handle CPU idle time
+        # CPU idle handling
         if current_time < arrival_time[i]:
             gantt_chart.append("IDLE")
             current_time = arrival_time[i]
 
-        # STEP 3: Start process execution
         start_time[i] = current_time
 
-        # Ensure correct time marker placement
         if gantt_time[-1] != current_time:
             gantt_time.append(current_time)
 
-        # STEP 4: Execute process fully (non-preemptive)
+        # Execute process fully
         gantt_chart.append(f"P{i+1}")
         current_time += burst_time[i]
-
-        # Record completion time
         finish_time[i] = current_time
+
         gantt_time.append(current_time)
 
-    # ── PER-PROCESS METRICS ───────────────────
-    turnaround_time  = []
-    waiting_time     = []
+    # ── METRICS ─────────────────────────────
+    turnaround_time = []
+    waiting_time = []
+
     total_turnaround = 0
-    total_waiting    = 0
+    total_waiting = 0
 
     for i in range(process_count):
-        # Turnaround = Finish − Arrival
         tat = finish_time[i] - arrival_time[i]
-
-        # Waiting = Turnaround − Burst
         wt = tat - burst_time[i]
 
         turnaround_time.append(tat)
         waiting_time.append(wt)
 
         total_turnaround += tat
-        total_waiting    += wt
+        total_waiting += wt
 
-    # ── SYSTEM PERFORMANCE ───────────────────
-    cpu_busy_time   = sum(burst_time)
-    total_time      = gantt_time[-1]
+    cpu_busy_time = sum(burst_time)
+    total_time = gantt_time[-1]
 
     cpu_utilization = (cpu_busy_time / total_time) * 100
-    throughput      = process_count / total_time
+    throughput = process_count / total_time
 
-    # CPU Utilization Rating
-    if cpu_utilization < 40:
-        cpu_label, cpu_meaning = "Poor",  "CPU is mostly idle (underutilized)."
-    elif cpu_utilization < 70:
-        cpu_label, cpu_meaning = "Fair",  "Moderate CPU usage."
-    elif cpu_utilization <= 90:
-        cpu_label, cpu_meaning = "Good",  "Efficient CPU usage."
-    else:
-        cpu_label, cpu_meaning = "High",  "Very high CPU load."
+    # ✅ UNIFIED PERFORMANCE LABELS
+    cpu_label, cpu_meaning, tp_label, tp_meaning = _perf_labels(
+        cpu_utilization,
+        throughput
+    )
 
-    # Throughput Rating
-    if throughput < 0.5:
-        throughput_label, throughput_meaning = "Low",      "Few processes completed."
-    elif throughput <= 1:
-        throughput_label, throughput_meaning = "Moderate", "Balanced completion rate."
-    else:
-        throughput_label, throughput_meaning = "High",     "Fast process completion."
-
-    # ── RETURN RESULTS ───────────────────────
     return dict(
         process_count=process_count,
         arrival_time=arrival_time,
         burst_time=burst_time,
+
         turnaround_time=turnaround_time,
         waiting_time=waiting_time,
         total_turnaround=total_turnaround,
         total_waiting=total_waiting,
+
         gantt_chart=gantt_chart,
         gantt_time=gantt_time,
+
         cpu_busy_time=cpu_busy_time,
         cpu_idle_time=total_time - cpu_busy_time,
+
         cpu_utilization=cpu_utilization,
         throughput=throughput,
+
         avg_waiting_time=total_waiting / process_count,
         avg_turnaround_time=total_turnaround / process_count,
+
         cpu_label=cpu_label,
         cpu_meaning=cpu_meaning,
-        throughput_label=throughput_label,
-        throughput_meaning=throughput_meaning,
+        throughput_label=tp_label,
+        throughput_meaning=tp_meaning,
     )
 
 
