@@ -76,7 +76,7 @@ def _run_npp(process_count, arrival_time, burst_time, priority_list):
         # ── CPU IDLE CASE ────────────────────────────────
         if not ready:
             # Extend last idle block or create a new one
-            if gantt_chart and gantt_chart[-1][0] == "ID":
+            if gantt_chart and gantt_chart[-1][0] == "IDLE":
                 gantt_chart[-1][2] = current_time + 1
             else:
                 gantt_chart.append(["ID", current_time, current_time + 1])
