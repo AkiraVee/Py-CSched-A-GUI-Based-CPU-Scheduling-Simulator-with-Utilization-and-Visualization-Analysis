@@ -18,71 +18,136 @@ def _perf_labels(cpu_util, throughput):
 
 
 # ─────────────────────────────────────────────
-# SRTF LOGIC
-# Every time unit, the process with the
-# shortest REMAINING burst is selected.
-# If a new process arrives with less remaining
-# time, it immediately takes over (preemptive).
+#  SRTF (SHORTEST REMAINING TIME FIRST)
 # ─────────────────────────────────────────────
+# Simulates the SRTF CPU scheduling algorithm.
+#
+# OVERVIEW:
+#   - At every time unit, the process with the
+#     SHORTEST remaining burst time is selected.
+#   - If a new process arrives with a shorter
+#     remaining time, it immediately preempts.
+#   - This is a PREEMPTIVE version of SJF.
+#
+# PARAMETERS:
+#   process_count : int   → number of processes
+#   arrival_time  : list  → arrival times
+#   burst_time    : list  → CPU burst times
 def _run_srtf(process_count, arrival_time, burst_time):
-    remaining    = burst_time.copy()  # remaining burst for each process
-    finish_time  = [0] * process_count
-    current_time = 0; done = 0; cpu_idle_time = 0
-    gantt = []; last_label = None; segment_start = 0
 
+    # Remaining execution time per process
+    remaining = burst_time.copy()
+
+    # Completion time for each process
+    finish_time = [0] * process_count
+
+    current_time  = 0     # Simulation clock
+    done          = 0     # Number of completed processes
+    cpu_idle_time = 0     # Total idle time
+
+    # Gantt tracking
+    gantt = []
+    last_label = None
+    segment_start = 0
+
+    # ── MAIN SIMULATION LOOP ───────────────────
     while done < process_count:
-        # Pick the process with the shortest remaining burst
-        idx = -1; min_remaining = float('inf')
+
+        # STEP 1: Find process with shortest remaining time
+        idx = -1
+        min_remaining = float('inf')
+
         for i in range(process_count):
             if arrival_time[i] <= current_time and remaining[i] > 0:
                 if remaining[i] < min_remaining:
-                    min_remaining = remaining[i]; idx = i
+                    min_remaining = remaining[i]
+                    idx = i
 
+        # STEP 2: If no process is ready → CPU idle
         if idx == -1:
-            # No process ready – CPU is idle
             label = "ID"
+
+            # Start or extend idle segment
             if last_label != label:
-                if last_label is not None: gantt.append((last_label, segment_start, current_time))
-                segment_start = current_time; last_label = label
-            current_time += 1; cpu_idle_time += 1; continue
+                if last_label is not None:
+                    gantt.append((last_label, segment_start, current_time))
+                segment_start = current_time
+                last_label = label
+
+            current_time += 1
+            cpu_idle_time += 1
+            continue
 
         label = f"P{idx+1}"
-        # If the running process changes, save the previous segment
+
+        # STEP 3: Handle context switch (new process takes CPU)
         if last_label != label:
-            if last_label is not None: gantt.append((last_label, segment_start, current_time))
-            segment_start = current_time; last_label = label
+            if last_label is not None:
+                gantt.append((last_label, segment_start, current_time))
+            segment_start = current_time
+            last_label = label
 
-        # Execute one unit of time
-        remaining[idx] -= 1; current_time += 1
+        # STEP 4: Execute process for 1 time unit
+        remaining[idx] -= 1
+        current_time += 1
+
+        # STEP 5: If process finishes
         if remaining[idx] == 0:
-            finish_time[idx] = current_time; done += 1
+            finish_time[idx] = current_time
+            done += 1
 
-    # Flush the final Gantt segment
-    if last_label is not None: gantt.append((last_label, segment_start, current_time))
+    # Finalize last Gantt segment
+    if last_label is not None:
+        gantt.append((last_label, segment_start, current_time))
 
-    turnaround_time = []; waiting_time = []
-    total_turnaround = 0; total_waiting = 0
+    # ── PER-PROCESS METRICS ───────────────────
+    turnaround_time = []
+    waiting_time    = []
+    total_turnaround = 0
+    total_waiting    = 0
+
     for i in range(process_count):
+        # Turnaround = Finish − Arrival
         tat = finish_time[i] - arrival_time[i]
-        wt  = tat - burst_time[i]
-        turnaround_time.append(tat); waiting_time.append(wt)
-        total_turnaround += tat; total_waiting += wt
 
-    cpu_busy_time = sum(burst_time); total_time = current_time
-    cpu_util  = (cpu_busy_time / total_time) * 100
+        # Waiting = Turnaround − Burst
+        wt = tat - burst_time[i]
+
+        turnaround_time.append(tat)
+        waiting_time.append(wt)
+
+        total_turnaround += tat
+        total_waiting    += wt
+
+    # ── SYSTEM PERFORMANCE ───────────────────
+    cpu_busy_time = sum(burst_time)
+    total_time    = current_time
+
+    cpu_util   = (cpu_busy_time / total_time) * 100
     throughput = process_count / total_time
+
     cpu_label, cpu_meaning, tp_label, tp_meaning = _perf_labels(cpu_util, throughput)
 
+    # ── RETURN RESULTS ───────────────────────
     return dict(
-        process_count=process_count, arrival_time=arrival_time, burst_time=burst_time,
-        turnaround_time=turnaround_time, waiting_time=waiting_time,
-        total_turnaround=total_turnaround, total_waiting=total_waiting,
-        gantt=gantt, cpu_busy_time=cpu_busy_time, cpu_idle_time=cpu_idle_time,
-        cpu_util=cpu_util, throughput=throughput,
+        process_count=process_count,
+        arrival_time=arrival_time,
+        burst_time=burst_time,
+        turnaround_time=turnaround_time,
+        waiting_time=waiting_time,
+        total_turnaround=total_turnaround,
+        total_waiting=total_waiting,
+        gantt=gantt,
+        cpu_busy_time=cpu_busy_time,
+        cpu_idle_time=cpu_idle_time,
+        cpu_util=cpu_util,
+        throughput=throughput,
         avg_waiting_time=total_waiting / process_count,
         avg_turnaround_time=total_turnaround / process_count,
-        cpu_label=cpu_label, cpu_meaning=cpu_meaning,
-        throughput_label=tp_label, throughput_meaning=tp_meaning,
+        cpu_label=cpu_label,
+        cpu_meaning=cpu_meaning,
+        throughput_label=tp_label,
+        throughput_meaning=tp_meaning,
     )
 
 

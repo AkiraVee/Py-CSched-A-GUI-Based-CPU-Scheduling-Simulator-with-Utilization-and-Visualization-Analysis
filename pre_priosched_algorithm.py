@@ -18,66 +18,135 @@ def _perf_labels(cpu_util, throughput):
 
 
 # ─────────────────────────────────────────────
-# PREEMPTIVE PRIORITY LOGIC
-# Every time unit, the highest-priority ready
-# process runs. If a new process arrives with
-# a better priority, it immediately preempts
-# whatever is currently running.
+#  PREEMPTIVE PRIORITY SCHEDULING ALGORITHM
 # ─────────────────────────────────────────────
+# Simulates Preemptive Priority CPU Scheduling.
+#
+# OVERVIEW:
+#   - At every time unit, the CPU selects the process
+#     with the HIGHEST priority (lowest number = highest priority).
+#   - If a new process arrives with a better priority,
+#     it IMMEDIATELY preempts the current process.
+#   - This is a PREEMPTIVE algorithm.
+#
+# PARAMETERS:
+#   n        : int   → number of processes
+#   arrival  : list  → arrival times
+#   burst    : list  → CPU burst times
+#   priority : list  → priority values (lower = higher priority)
 def _run_pp(n, arrival, burst, priority):
-    remaining  = burst[:]           # remaining burst for each process
-    completed  = [False] * n
-    start      = [-1]    * n
-    finish     = [0]     * n
-    time = 0; done = 0; gantt = []; last = None
 
+    # Remaining execution time for each process
+    remaining = burst[:]
+
+    # Track completion status
+    completed = [False] * n
+
+    # First time each process gets CPU (-1 = not started)
+    start = [-1] * n
+
+    # Completion time of each process
+    finish = [0] * n
+
+    time = 0     # Current time (simulation clock)
+    done = 0     # Number of completed processes
+
+    # Gantt chart: [label, start, end]
+    gantt = []
+
+    # ── MAIN SIMULATION LOOP ───────────────────
     while done < n:
-        # Pick the highest-priority available process
-        idx = -1; best = float("inf")
+
+        # STEP 1: Find highest-priority ready process
+        idx = -1
+        best = float("inf")
+
         for i in range(n):
             if arrival[i] <= time and remaining[i] > 0:
-                if priority[i] < best: best = priority[i]; idx = i
+                if priority[i] < best:
+                    best = priority[i]
+                    idx = i
 
+        # STEP 2: If no process is ready → CPU is idle
         if idx == -1:
-            # CPU idle – extend or start an IDLE block
-            if gantt and gantt[-1][0] == "ID": gantt[-1][2] += 1
-            else: gantt.append(["ID", time, time + 1])
-            time += 1; last = "ID"; continue
+            if gantt and gantt[-1][0] == "ID":
+                gantt[-1][2] += 1  # Extend idle block
+            else:
+                gantt.append(["ID", time, time + 1])
+            time += 1
+            continue
 
         label = f"P{idx+1}"
-        if start[idx] == -1: start[idx] = time
 
-        # Extend the current Gantt block or start a new one
-        if gantt and gantt[-1][0] == label: gantt[-1][2] += 1
-        else: gantt.append([label, time, time + 1])
+        # Record first execution time
+        if start[idx] == -1:
+            start[idx] = time
 
-        # Execute one unit of time
-        remaining[idx] -= 1; time += 1
+        # STEP 3: Add or extend Gantt chart entry
+        if gantt and gantt[-1][0] == label:
+            gantt[-1][2] += 1
+        else:
+            gantt.append([label, time, time + 1])
+
+        # STEP 4: Execute process for 1 time unit
+        remaining[idx] -= 1
+        time += 1
+
+        # STEP 5: If finished → record completion
         if remaining[idx] == 0:
-            finish[idx] = time; completed[idx] = True; done += 1
+            finish[idx] = time
+            completed[idx] = True
+            done += 1
 
-    total_tat = 0; total_wt = 0
-    turnaround_time = []; waiting_time = []
+    # ── PER-PROCESS METRICS ───────────────────
+    turnaround_time = []
+    waiting_time    = []
+    total_tat = 0
+    total_wt  = 0
+
     for i in range(n):
+        # Turnaround = Finish − Arrival
         tat = finish[i] - arrival[i]
-        wt  = tat - burst[i]
-        turnaround_time.append(tat); waiting_time.append(wt)
-        total_tat += tat; total_wt += wt
 
-    cpu_busy = sum(burst); total_time = time
-    cpu_util  = (cpu_busy / total_time) * 100
+        # Waiting = Turnaround − Burst
+        wt = tat - burst[i]
+
+        turnaround_time.append(tat)
+        waiting_time.append(wt)
+
+        total_tat += tat
+        total_wt  += wt
+
+    # ── SYSTEM PERFORMANCE ───────────────────
+    cpu_busy   = sum(burst)
+    total_time = time
+
+    cpu_util   = (cpu_busy / total_time) * 100
     throughput = n / total_time
+
     cpu_label, cpu_meaning, tp_label, tp_meaning = _perf_labels(cpu_util, throughput)
 
+    # ── RETURN RESULTS ───────────────────────
     return dict(
-        n=n, arrival=arrival, burst=burst, priority=priority,
-        turnaround_time=turnaround_time, waiting_time=waiting_time,
-        total_tat=total_tat, total_wt=total_wt, gantt=gantt,
-        cpu_busy=cpu_busy, cpu_idle=total_time - cpu_busy,
-        util=cpu_util, throughput=throughput,
-        avg_wt=total_wt / n, avg_tat=total_tat / n,
-        cpu_label=cpu_label, cpu_meaning=cpu_meaning,
-        throughput_label=tp_label, throughput_meaning=tp_meaning,
+        n=n,
+        arrival=arrival,
+        burst=burst,
+        priority=priority,
+        turnaround_time=turnaround_time,
+        waiting_time=waiting_time,
+        total_tat=total_tat,
+        total_wt=total_wt,
+        gantt=gantt,
+        cpu_busy=cpu_busy,
+        cpu_idle=total_time - cpu_busy,
+        util=cpu_util,
+        throughput=throughput,
+        avg_wt=total_wt / n,
+        avg_tat=total_tat / n,
+        cpu_label=cpu_label,
+        cpu_meaning=cpu_meaning,
+        throughput_label=tp_label,
+        throughput_meaning=tp_meaning,
     )
 
 
