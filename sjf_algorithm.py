@@ -7,84 +7,138 @@ from theme import (
 
 
 # ─────────────────────────────────────────────
-# SJF LOGIC
-# At each decision point, picks the process
-# with the shortest burst time from those
-# that have already arrived. Non-preemptive –
-# once started, a process runs to completion.
+#  SJF (SHORTEST JOB FIRST)
 # ─────────────────────────────────────────────
+# Simulates the SJF CPU scheduling algorithm.
+#
+# OVERVIEW:
+#   - Among available processes, select the one
+#     with the SHORTEST burst time.
+#   - Once a process starts, it runs to completion.
+#   - This is a NON-PREEMPTIVE algorithm.
+#
+# PARAMETERS:
+#   process_count : int   → number of processes
+#   arrival_time  : list  → arrival times
+#   burst_time    : list  → CPU burst times
 def _run_sjf(process_count, arrival_time, burst_time):
-    completed    = [False] * process_count
-    start_time   = [0]     * process_count
-    finish_time  = [0]     * process_count
+
+    # Track process states
+    completed   = [False] * process_count
+    start_time  = [0]     * process_count
+    finish_time = [0]     * process_count
+
     current_time  = 0
     done          = 0
     cpu_idle_time = 0
-    gantt_chart   = []
-    gantt_time    = [0]
 
+    # Gantt chart representation
+    gantt_chart = []
+    gantt_time  = [0]
+
+    # ── MAIN SIMULATION LOOP ───────────────────
     while done < process_count:
-        # Pick the available process with the shortest burst
-        idx = -1; min_burst = float('inf')
+
+        # STEP 1: Select process with shortest burst among arrived
+        idx = -1
+        min_burst = float('inf')
+
         for i in range(process_count):
             if arrival_time[i] <= current_time and not completed[i]:
                 if burst_time[i] < min_burst:
-                    min_burst = burst_time[i]; idx = i
+                    min_burst = burst_time[i]
+                    idx = i
 
+        # STEP 2: If no process is ready → CPU idle
         if idx == -1:
-            # No process ready – jump to the next arrival
+            # Jump directly to next arrival (efficient idle handling)
             next_arrival = min(arrival_time[i] for i in range(process_count) if not completed[i])
+
             if current_time < next_arrival:
                 gantt_chart.append("IDLE")
                 cpu_idle_time += next_arrival - current_time
                 current_time   = next_arrival
                 gantt_time.append(current_time)
+
             continue
 
-        # Run the selected process fully
+        # STEP 3: Execute selected process fully
         start_time[idx] = current_time
         gantt_chart.append(f"P{idx+1}")
-        current_time    += burst_time[idx]
+
+        current_time += burst_time[idx]
         finish_time[idx] = current_time
+
         gantt_time.append(current_time)
-        completed[idx] = True; done += 1
 
-    # Calculate turnaround and waiting for each process
-    turnaround_time = []; waiting_time = []
-    total_turnaround = 0; total_waiting = 0
+        completed[idx] = True
+        done += 1
+
+    # ── PER-PROCESS METRICS ───────────────────
+    turnaround_time  = []
+    waiting_time     = []
+    total_turnaround = 0
+    total_waiting    = 0
+
     for i in range(process_count):
+        # Turnaround = Finish − Arrival
         tat = finish_time[i] - arrival_time[i]
-        wt  = tat - burst_time[i]
-        turnaround_time.append(tat); waiting_time.append(wt)
-        total_turnaround += tat; total_waiting += wt
 
+        # Waiting = Turnaround − Burst
+        wt = tat - burst_time[i]
+
+        turnaround_time.append(tat)
+        waiting_time.append(wt)
+
+        total_turnaround += tat
+        total_waiting    += wt
+
+    # ── SYSTEM PERFORMANCE ───────────────────
     cpu_busy_time = sum(burst_time)
     total_time    = gantt_time[-1]
-    cpu_util      = (cpu_busy_time / total_time) * 100
-    throughput    = process_count / total_time
 
-    # Rate CPU utilization
-    if cpu_util < 40:    cpu_label, cpu_meaning = "Poor",  "CPU is mostly idle (underutilized)."
-    elif cpu_util < 70:  cpu_label, cpu_meaning = "Fair",  "Moderate CPU usage."
-    elif cpu_util <= 90: cpu_label, cpu_meaning = "Good",  "Efficient CPU usage."
-    else:                cpu_label, cpu_meaning = "High",  "Very high CPU load."
+    cpu_util   = (cpu_busy_time / total_time) * 100
+    throughput = process_count / total_time
 
-    # Rate throughput
-    if throughput < 0.5:   tp_label, tp_meaning = "Low",      "Few processes completed."
-    elif throughput <= 1:  tp_label, tp_meaning = "Moderate", "Balanced completion rate."
-    else:                  tp_label, tp_meaning = "High",     "Fast process completion."
+    # CPU Utilization Rating
+    if cpu_util < 40:
+        cpu_label, cpu_meaning = "Poor",  "CPU is mostly idle (underutilized)."
+    elif cpu_util < 70:
+        cpu_label, cpu_meaning = "Fair",  "Moderate CPU usage."
+    elif cpu_util <= 90:
+        cpu_label, cpu_meaning = "Good",  "Efficient CPU usage."
+    else:
+        cpu_label, cpu_meaning = "High",  "Very high CPU load."
 
+    # Throughput Rating
+    if throughput < 0.5:
+        tp_label, tp_meaning = "Low",      "Few processes completed."
+    elif throughput <= 1:
+        tp_label, tp_meaning = "Moderate", "Balanced completion rate."
+    else:
+        tp_label, tp_meaning = "High",     "Fast process completion."
+
+    # ── RETURN RESULTS ───────────────────────
     return dict(
-        process_count=process_count, arrival_time=arrival_time, burst_time=burst_time,
-        turnaround_time=turnaround_time, waiting_time=waiting_time,
-        total_turnaround=total_turnaround, total_waiting=total_waiting,
-        gantt_chart=gantt_chart, gantt_time=gantt_time,
-        cpu_busy_time=cpu_busy_time, cpu_idle_time=cpu_idle_time,
-        cpu_util=cpu_util, throughput=throughput,
+        process_count=process_count,
+        arrival_time=arrival_time,
+        burst_time=burst_time,
+        turnaround_time=turnaround_time,
+        waiting_time=waiting_time,
+        total_turnaround=total_turnaround,
+        total_waiting=total_waiting,
+        gantt_chart=gantt_chart,
+        gantt_time=gantt_time,
+        cpu_busy_time=cpu_busy_time,
+        cpu_idle_time=cpu_idle_time,
+        cpu_util=cpu_util,
+        throughput=throughput,
         avg_waiting_time=total_waiting / process_count,
         avg_turnaround_time=total_turnaround / process_count,
-        cpu_label=cpu_label, cpu_meaning=cpu_meaning,
-        throughput_label=tp_label, throughput_meaning=tp_meaning,
+        cpu_label=cpu_label,
+        cpu_meaning=cpu_meaning,
+        throughput_label=tp_label,
+        throughput_meaning=tp_meaning,
     )
 
 

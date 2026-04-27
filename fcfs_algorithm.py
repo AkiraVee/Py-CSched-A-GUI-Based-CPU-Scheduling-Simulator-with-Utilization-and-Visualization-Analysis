@@ -7,59 +7,84 @@ from theme import (
 
 
 # ─────────────────────────────────────────────
-# FCFS LOGIC
-# Sorts processes by arrival time, then runs
-# each one fully before moving to the next.
-# If the CPU is free, an IDLE block is added.
+#  FCFS (FIRST COME FIRST SERVE)
 # ─────────────────────────────────────────────
+# Simulates the FCFS CPU scheduling algorithm.
+#
+# OVERVIEW:
+#   - Processes are executed in the order they arrive.
+#   - Once a process starts, it runs until completion.
+#   - This is a NON-PREEMPTIVE algorithm.
+#
+# PARAMETERS:
+#   process_count : int   → number of processes
+#   arrival_time  : list  → arrival times
+#   burst_time    : list  → CPU burst times
 def _run_fcfs(process_count, arrival_time, burst_time):
 
-    # Sort processes by who arrives first
+    # STEP 1: Sort processes based on arrival time
     processes = list(range(process_count))
     processes.sort(key=lambda x: arrival_time[x])
 
+    # Initialize tracking arrays
     start_time   = [0] * process_count
     finish_time  = [0] * process_count
     current_time = 0
-    gantt_chart  = []   # labels shown on the Gantt chart
-    gantt_time   = [0]  # time markers below the Gantt chart
 
+    # Gantt chart representation
+    gantt_chart = []   # process labels
+    gantt_time  = [0]  # time markers
+
+    # ── MAIN EXECUTION LOOP ───────────────────
     for i in processes:
-        # If CPU has nothing to do, insert an IDLE block
+
+        # STEP 2: Handle CPU idle time
         if current_time < arrival_time[i]:
             gantt_chart.append("IDLE")
             current_time = arrival_time[i]
 
+        # STEP 3: Start process execution
         start_time[i] = current_time
+
+        # Ensure correct time marker placement
         if gantt_time[-1] != current_time:
             gantt_time.append(current_time)
 
-        # Run the process for its full burst time
+        # STEP 4: Execute process fully (non-preemptive)
         gantt_chart.append(f"P{i+1}")
-        current_time  += burst_time[i]
+        current_time += burst_time[i]
+
+        # Record completion time
         finish_time[i] = current_time
         gantt_time.append(current_time)
 
-    # Calculate turnaround and waiting time for each process
+    # ── PER-PROCESS METRICS ───────────────────
     turnaround_time  = []
     waiting_time     = []
     total_turnaround = 0
     total_waiting    = 0
 
     for i in range(process_count):
-        tat = finish_time[i] - arrival_time[i]  # how long from arrival to finish
-        wt  = tat - burst_time[i]               # time spent waiting (not running)
+        # Turnaround = Finish − Arrival
+        tat = finish_time[i] - arrival_time[i]
+
+        # Waiting = Turnaround − Burst
+        wt = tat - burst_time[i]
+
         turnaround_time.append(tat)
         waiting_time.append(wt)
+
         total_turnaround += tat
         total_waiting    += wt
 
+    # ── SYSTEM PERFORMANCE ───────────────────
     cpu_busy_time   = sum(burst_time)
     total_time      = gantt_time[-1]
+
     cpu_utilization = (cpu_busy_time / total_time) * 100
     throughput      = process_count / total_time
 
-    # Rate the CPU utilization
+    # CPU Utilization Rating
     if cpu_utilization < 40:
         cpu_label, cpu_meaning = "Poor",  "CPU is mostly idle (underutilized)."
     elif cpu_utilization < 70:
@@ -69,7 +94,7 @@ def _run_fcfs(process_count, arrival_time, burst_time):
     else:
         cpu_label, cpu_meaning = "High",  "Very high CPU load."
 
-    # Rate the throughput
+    # Throughput Rating
     if throughput < 0.5:
         throughput_label, throughput_meaning = "Low",      "Few processes completed."
     elif throughput <= 1:
@@ -77,18 +102,27 @@ def _run_fcfs(process_count, arrival_time, burst_time):
     else:
         throughput_label, throughput_meaning = "High",     "Fast process completion."
 
+    # ── RETURN RESULTS ───────────────────────
     return dict(
-        process_count=process_count, arrival_time=arrival_time,
-        burst_time=burst_time, turnaround_time=turnaround_time,
-        waiting_time=waiting_time, total_turnaround=total_turnaround,
-        total_waiting=total_waiting, gantt_chart=gantt_chart,
-        gantt_time=gantt_time, cpu_busy_time=cpu_busy_time,
+        process_count=process_count,
+        arrival_time=arrival_time,
+        burst_time=burst_time,
+        turnaround_time=turnaround_time,
+        waiting_time=waiting_time,
+        total_turnaround=total_turnaround,
+        total_waiting=total_waiting,
+        gantt_chart=gantt_chart,
+        gantt_time=gantt_time,
+        cpu_busy_time=cpu_busy_time,
         cpu_idle_time=total_time - cpu_busy_time,
-        cpu_utilization=cpu_utilization, throughput=throughput,
-        avg_waiting_time=total_waiting    / process_count,
+        cpu_utilization=cpu_utilization,
+        throughput=throughput,
+        avg_waiting_time=total_waiting / process_count,
         avg_turnaround_time=total_turnaround / process_count,
-        cpu_label=cpu_label, cpu_meaning=cpu_meaning,
-        throughput_label=throughput_label, throughput_meaning=throughput_meaning,
+        cpu_label=cpu_label,
+        cpu_meaning=cpu_meaning,
+        throughput_label=throughput_label,
+        throughput_meaning=throughput_meaning,
     )
 
 

@@ -7,88 +7,171 @@ from theme import (
 
 
 # ─────────────────────────────────────────────
-# SHARED PERFORMANCE LABELS
-# Converts raw numbers into a readable rating.
+#  PERFORMANCE LABEL HELPER
 # ─────────────────────────────────────────────
+# Converts raw CPU utilization and throughput values
+# into readable labels and explanations.
 def _perf_labels(cpu_util, throughput):
-    if cpu_util < 40:    cpu_label, cpu_meaning = "Poor",  "CPU is mostly idle (underutilized)."
-    elif cpu_util < 70:  cpu_label, cpu_meaning = "Fair",  "Moderate CPU usage."
-    elif cpu_util <= 90: cpu_label, cpu_meaning = "Good",  "Efficient CPU usage."
-    else:                cpu_label, cpu_meaning = "High",  "Very high CPU load."
-    if throughput < 0.5: tp_label,  tp_meaning  = "Low",      "Few processes completed."
-    elif throughput <= 1:tp_label,  tp_meaning  = "Moderate", "Balanced completion rate."
-    else:                tp_label,  tp_meaning  = "High",     "Fast process completion."
+
+    # CPU utilization rating
+    if cpu_util < 40:
+        cpu_label, cpu_meaning = "Poor", "CPU is mostly idle (underutilized)."
+    elif cpu_util < 70:
+        cpu_label, cpu_meaning = "Fair", "Moderate CPU usage."
+    elif cpu_util <= 90:
+        cpu_label, cpu_meaning = "Good", "Efficient CPU usage."
+    else:
+        cpu_label, cpu_meaning = "High", "Very high CPU load."
+
+    # Throughput rating (processes completed per unit time)
+    if throughput < 0.5:
+        tp_label, tp_meaning = "Low", "Few processes completed."
+    elif throughput <= 1:
+        tp_label, tp_meaning = "Moderate", "Balanced completion rate."
+    else:
+        tp_label, tp_meaning = "High", "Fast process completion."
+
     return cpu_label, cpu_meaning, tp_label, tp_meaning
 
 
 # ─────────────────────────────────────────────
-# NON-PREEMPTIVE PRIORITY LOGIC
-# At each decision point, picks the ready
-# process with the lowest priority number
-# (lower = more important). Once a process
-# starts, it runs until fully complete.
+#  NON-PREEMPTIVE PRIORITY SCHEDULING ALGORITHM
 # ─────────────────────────────────────────────
+# Description:
+#   - Selects the process with the highest priority (lowest number)
+#     among those that have already arrived.
+#   - Once a process starts, it runs until completion (non-preemptive).
+#   - If no process is ready, CPU becomes idle.
+#
+# Parameters:
+#   process_count – total number of processes
+#   arrival_time  – list of arrival times
+#   burst_time    – list of CPU burst times
+#   priority_list – list of priorities (lower value = higher priority)
 def _run_npp(process_count, arrival_time, burst_time, priority_list):
-    completed   = [False] * process_count
-    start_time  = [0]     * process_count
-    finish_time = [0]     * process_count
-    current_time = 0; done = 0
-    gantt_chart  = []; gantt_time = [0]
 
+    # Track completion status of each process
+    completed = [False] * process_count
+
+    # Store start and finish times
+    start_time  = [0] * process_count
+    finish_time = [0] * process_count
+
+    current_time = 0   # simulation clock
+    done = 0           # number of completed processes
+
+    # Gantt chart stores execution segments: [label, start, end]
+    gantt_chart = []
+    gantt_time  = [0]  # time markers
+
+    # ── Main scheduling loop ─────────────────────────────
     while done < process_count:
-        # Collect all processes that have arrived and are not done
-        ready = [i for i in range(process_count)
-                 if arrival_time[i] <= current_time and not completed[i]]
 
+        # Get all processes that have arrived and are not yet completed
+        ready = [
+            i for i in range(process_count)
+            if arrival_time[i] <= current_time and not completed[i]
+        ]
+
+        # ── CPU IDLE CASE ────────────────────────────────
         if not ready:
-            # CPU is idle – extend or add an IDLE block
+            # Extend last idle block or create a new one
             if gantt_chart and gantt_chart[-1][0] == "ID":
                 gantt_chart[-1][2] = current_time + 1
             else:
                 gantt_chart.append(["ID", current_time, current_time + 1])
-            current_time += 1; gantt_time.append(current_time); continue
 
-        # Pick the process with the highest priority (lowest number)
+            current_time += 1
+            gantt_time.append(current_time)
+            continue
+
+        # ── SELECT HIGHEST PRIORITY PROCESS ─────────────
+        # Lower number = higher priority
         idx = ready[0]
         for i in ready:
-            if priority_list[i] < priority_list[idx]: idx = i
+            if priority_list[i] < priority_list[idx]:
+                idx = i
 
-        start_exec = current_time; start_time[idx] = current_time
-        current_time += burst_time[idx]; finish_time[idx] = current_time
+        # ── EXECUTE PROCESS (NON-PREEMPTIVE) ────────────
+        start_exec = current_time
+        start_time[idx] = current_time
 
+        # Run the process fully
+        current_time += burst_time[idx]
+        finish_time[idx] = current_time
+
+        # Add to Gantt chart
         label = f"P{idx+1}"
         if gantt_chart and gantt_chart[-1][0] == label:
             gantt_chart[-1][2] = current_time
         else:
             gantt_chart.append([label, start_exec, current_time])
 
-        gantt_time.append(current_time); completed[idx] = True; done += 1
+        gantt_time.append(current_time)
 
-    total_turnaround = 0; total_waiting = 0
-    turnaround_time = []; waiting_time = []
+        # Mark process as completed
+        completed[idx] = True
+        done += 1
+
+    # ── CALCULATE PER-PROCESS METRICS ───────────────────
+    turnaround_time = []
+    waiting_time    = []
+    total_turnaround = 0
+    total_waiting    = 0
+
     for i in range(process_count):
+        # Turnaround Time = Finish - Arrival
         tat = finish_time[i] - arrival_time[i]
-        wt  = tat - burst_time[i]
-        turnaround_time.append(tat); waiting_time.append(wt)
-        total_turnaround += tat; total_waiting += wt
 
-    cpu_busy_time = sum(burst_time); total_time = gantt_time[-1]
-    cpu_util  = (cpu_busy_time / total_time) * 100
+        # Waiting Time = Turnaround - Burst
+        wt = tat - burst_time[i]
+
+        turnaround_time.append(tat)
+        waiting_time.append(wt)
+
+        total_turnaround += tat
+        total_waiting    += wt
+
+    # ── SYSTEM PERFORMANCE METRICS ──────────────────────
+    cpu_busy_time = sum(burst_time)
+    total_time    = gantt_time[-1]
+
+    # CPU utilization (% of time CPU is working)
+    cpu_util = (cpu_busy_time / total_time) * 100
+
+    # Throughput (processes completed per unit time)
     throughput = process_count / total_time
+
     cpu_label, cpu_meaning, tp_label, tp_meaning = _perf_labels(cpu_util, throughput)
 
+    # Return all computed results
     return dict(
-        process_count=process_count, arrival_time=arrival_time,
-        burst_time=burst_time, priority_list=priority_list,
-        turnaround_time=turnaround_time, waiting_time=waiting_time,
-        total_turnaround=total_turnaround, total_waiting=total_waiting,
-        gantt_chart=gantt_chart, gantt_time=gantt_time,
-        cpu_busy_time=cpu_busy_time, cpu_idle_time=total_time - cpu_busy_time,
-        cpu_utilization=cpu_util, throughput=throughput,
+        process_count=process_count,
+        arrival_time=arrival_time,
+        burst_time=burst_time,
+        priority_list=priority_list,
+
+        turnaround_time=turnaround_time,
+        waiting_time=waiting_time,
+        total_turnaround=total_turnaround,
+        total_waiting=total_waiting,
+
+        gantt_chart=gantt_chart,
+        gantt_time=gantt_time,
+
+        cpu_busy_time=cpu_busy_time,
+        cpu_idle_time=total_time - cpu_busy_time,
+
+        cpu_utilization=cpu_util,
+        throughput=throughput,
+
         avg_waiting_time=total_waiting / process_count,
         avg_turnaround_time=total_turnaround / process_count,
-        cpu_label=cpu_label, cpu_meaning=cpu_meaning,
-        throughput_label=tp_label, throughput_meaning=tp_meaning,
+
+        cpu_label=cpu_label,
+        cpu_meaning=cpu_meaning,
+        throughput_label=tp_label,
+        throughput_meaning=tp_meaning,
     )
 
 
