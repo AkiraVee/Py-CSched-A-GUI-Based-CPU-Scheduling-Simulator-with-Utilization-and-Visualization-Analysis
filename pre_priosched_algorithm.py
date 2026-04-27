@@ -69,10 +69,10 @@ def _run_pp(n, arrival, burst, priority):
 
         # STEP 2: If no process is ready → CPU is idle
         if idx == -1:
-            if gantt and gantt[-1][0] == "ID":
+            if gantt and gantt[-1][0] == "IDLE":
                 gantt[-1][2] += 1  # Extend idle block
             else:
-                gantt.append(["ID", time, time + 1])
+                gantt.append(["IDLE", time, time + 1])
             time += 1
             continue
 

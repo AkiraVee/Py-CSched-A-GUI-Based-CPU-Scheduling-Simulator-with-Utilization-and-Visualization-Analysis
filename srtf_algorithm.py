@@ -65,7 +65,7 @@ def _run_srtf(process_count, arrival_time, burst_time):
 
         # STEP 2: If no process is ready → CPU idle
         if idx == -1:
-            label = "ID"
+            label = "IDLE"
 
             # Start or extend idle segment
             if last_label != label:
